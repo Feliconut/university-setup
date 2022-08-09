@@ -10,7 +10,7 @@ class Course():
         self.path = path
         self.name = path.stem
 
-        self.info = yaml.load((path / 'info.yaml').open())
+        self.info = yaml.safe_load((path / 'info.yaml').open())
         self._lectures = None
 
     @property
@@ -23,6 +23,10 @@ class Course():
         if other == None:
             return False
         return self.path == other.path
+    @property
+    def is_activated(self):
+
+        return CURRENT_COURSE_SYMLINK.resolve()== self.path
 
 class Courses(list):
     def __init__(self):
