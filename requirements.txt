@@ -1,0 +1,4 @@
+iterm2
+pyobjc
+pyyaml
+

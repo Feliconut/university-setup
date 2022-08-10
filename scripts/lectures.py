@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/local/bin/python3
 
 import os
 from datetime import datetime
@@ -46,9 +46,9 @@ class Lecture():
 
     def edit(self):
         assert self.course.is_activated
-        subprocess.Popen([
-            "gnome-terminal",
-            "-e",
+        subprocess.run([
+            "iterm.py",
+            #"-e",
             #"bash",
             #"-c",
             #f"vim --servername purdue --remote-silent ~/Documents/Purdue/current_course/{self.file_path.name}"
@@ -118,11 +118,13 @@ class Lectures(list):
             ' ' * 4 + r'\input{' + number2filename(number) + '}\n' for number in r)
         self.master_file.write_text(header + body + footer)
 
-    def new_lecture(self):
+    def new_lecture(self, name):
         if len(self) != 0:
             new_lecture_number = self[-1].number + 1
         else:
             new_lecture_number = 1
+        
+        name = name.strip()
 
         new_lecture_path = self.root / number2filename(new_lecture_number)
 
@@ -130,7 +132,7 @@ class Lectures(list):
         date = today.strftime(DATE_FORMAT)
 
         new_lecture_path.touch()
-        new_lecture_path.write_text(f'\\lecture{{{new_lecture_number}}}{{{date}}}{{}}\n')
+        new_lecture_path.write_text(f'\\lecture{{{new_lecture_number}}}{{{date}}}{{{name}}}\n')
 
         if new_lecture_number == 1:
             self.update_lectures_in_master([1])
@@ -146,8 +148,8 @@ class Lectures(list):
 
     def compile_master(self):
         result = subprocess.run(
-            ['pdflatex',str(self.master_file)],
-            #['latexmk', '-f', '-interaction=nonstopmode', str(self.master_file)],
+            # ['pdflatex',str(self.master_file)],
+            ['latexmk', '-f', '-interaction=nonstopmode', str(self.master_file)],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             cwd=str(self.root)
