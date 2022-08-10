@@ -1,4 +1,6 @@
-#!/usr/bin/python3
+#!/usr/local/bin/python3
+import sys
+print(sys.executable)
 from courses import Courses
 from rofi import rofi
 from utils import generate_short_title, MAX_LEN
