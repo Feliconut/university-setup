@@ -1,8 +1,8 @@
 #!/usr/local/bin/python3
 import sys
 from courses import Courses
-from rofi import rofi
-from rofi import Rofi
+from choose import rofi
+from choose import Rofi
 from utils import generate_short_title, MAX_LEN
 
 lectures = Courses().current.lectures

@@ -1,5 +1,5 @@
+#!/usr/local/bin/python3
 from enum import Enum
-import enum
 import subprocess
 
 class Rofi(Enum):

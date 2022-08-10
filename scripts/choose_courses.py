@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-from rofi import rofi
+from choose import rofi
 
 from courses import Courses
 
@@ -12,6 +12,8 @@ try:
 except ValueError:
     args = []
 
+options = [c.info['title'] for c in courses]
+
 
 def process(code, index, selected):
     print((code, index, selected))
@@ -20,5 +22,5 @@ def process(code, index, selected):
 
 
 if __name__ == '__main__':
-    process(*rofi('Select course', [c.info['title'] for c in courses], [
+    process(*rofi('Select course', options, [
     ] + args))

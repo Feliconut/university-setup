@@ -1,4 +1,4 @@
-#!/bin/python3
+#!/usr/local/bin/python3
 from courses import Courses
 
 for course in Courses():

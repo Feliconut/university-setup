@@ -1,6 +1,6 @@
 #!/usr/local/bin/python3
 from courses import Courses
-from rofi import rofi
+from choose import rofi
 
 lectures = Courses().current.lectures
 
