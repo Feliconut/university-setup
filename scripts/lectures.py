@@ -41,6 +41,8 @@ class Lecture():
         self.title = title
         self.course = course
 
+
+
     def edit(self):
         assert self.course.is_activated
         subprocess.run([
@@ -62,6 +64,13 @@ class Lectures(list):
         self.root = course.path
         self.master_file = self.root / 'master.tex'
         list.__init__(self, self.read_files())
+        self.all_numbers = [lecture.number for lecture in self]
+
+    def get_from_number(self, number):
+        for lecture in self:
+            lecture:Lecture
+            if lecture.number == number:
+                return lecture
 
     def read_files(self):
         files = self.root.glob('lec_*.tex')
@@ -78,7 +87,7 @@ class Lectures(list):
             raise ValueError(f'Invalid lecture spec: {string}')
 
     def parse_range_string(self, arg):
-        all_numbers = [lecture.number for lecture in self]
+        all_numbers = self.all_numbers
         if 'all' in arg:
             return all_numbers
 

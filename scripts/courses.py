@@ -75,8 +75,8 @@ class Courses():
 
     @property
     def current(self):
-        return self.get_current_course()
+        return Courses.get_current_course()
 
     @current.setter
     def current(self, course):
-        self.set_current_course(course)
+        Courses.set_current_course(course)

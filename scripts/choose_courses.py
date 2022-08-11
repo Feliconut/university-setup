@@ -16,10 +16,10 @@ class SetCurrentCourse(Action):
                 semester=course.semester),
             description='Set current course')
 
-    def execute(self, state):
+    def execute(self):
         self.logger.info(
             'Setting current course to {}'.format(self.course.name))
-        Courses.current = self.course
+        Courses.set_current_course(self.course)
 
 
 class ChooseCurrentCourse(Service):
@@ -28,8 +28,10 @@ class ChooseCurrentCourse(Service):
             name='choose course',
             description='Choose current course')
 
-    def _load_actions(self):
-        return [SetCurrentCourse(course) for course in Courses()]
+    def suggested_actions(self):
+        actions = []
+        actions += [SetCurrentCourse(course) for course in Courses()]
+        return actions
 
 
 if __name__ == '__main__':

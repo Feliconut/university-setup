@@ -1,5 +1,4 @@
 import logging
-from sre_parse import State
 
 
 # Creating and Configuring Logger
@@ -7,7 +6,7 @@ from sre_parse import State
 Log_Format = "%(levelname)s %(asctime)s - %(message)s"
 
 logging.basicConfig(
-    filename = "/Users/xiaoyu/Repos/university-setup/scripts/logfile.log",
+    filename="/Users/xiaoyu/Repos/university-setup/scripts/logfile.log",
     # stream=sys.stdout,
     filemode="w",
     format=Log_Format,
@@ -19,69 +18,91 @@ class Loggable():
         self.logger = logging.getLogger(self.__class__.__name__)
 
 
-class Action(Loggable):
-    def __init__(self, name, display_name=None, description=None, *args):
-        super().__init__()
+class MenuItem():
+    def __init__(self, name, display_name=None, description=None):
         self.name = name  # internal name
         # name as displayed in the menu, may be altered
         self.display_name = display_name if display_name else name
         self.description = description
-        self.args = args
-
-    def execute(self, *args):
-        raise NotImplementedError()
 
     def __str__(self):
-        return self.name + ' ' + self.description + ' ' + str(self.args)
+        return self.name + ' ' + self.description
+
+
+class Action(Loggable, MenuItem):
+    def __init__(self, name, display_name=None, description=None):
+        Loggable.__init__(self)
+        MenuItem.__init__(self, name, display_name, description)
+
+    def execute(self):
+        raise NotImplementedError()
 
 
 class Service(Loggable):
-    def __init__(self, name, description, *args):
+    def __init__(self, name, description):
         super().__init__()
         self.name = name
         self.description = description
         self.actions = []
-        self.args = args
+        self.hint_word = []
 
-    def _load_actions(self):
+    def suggested_actions(self):
         raise NotImplementedError()
 
     def __str__(self):
         return self.name + ' ' + self.description + ' ' + str(self.actions)
 
-    def get_available_actions(self, state):
+    def get_displayed_menuitems(self, include_hint=True):
         try:
-            new_actions = self._load_actions()
+            new_actions = self.suggested_actions()
             assert isinstance(new_actions, list)
             self.actions = new_actions
+        except NotImplementedError:
+            self.actions = []
         except:
             self.logger.warning(
-                'Could not load actions for service {}'.format(self.name))
+                'Failed to load suggested actions for service {}'.format(self.name))
             pass
-        return self.actions
-    
-    def improvise_action(self, prompt):
+
+        if include_hint and self.hint_word:
+            # add a empty action according to hint word
+            hint_prompt = ' '.join(self.hint_word)
+            hint_action = MenuItem(hint_prompt, hint_prompt)
+            return self.actions + [hint_action]
+        else:
+            return self.actions
+
+    def make_custom_action(self, args: list):
         raise NotImplementedError()
 
-    def execute(self, state: State = None):
-        from choose import Choose
-        available_actions = self.get_available_actions(state)
+    def action_from_prompt(self, prompt: str):
+        args = prompt.strip().split()
+        try:
+            if self.hint_word == args[:len(self.hint_word)]:
+                action = self.make_custom_action(
+                    args[len(self.hint_word):])
+                return action
+        except IndexError:
+            pass
+        except NotImplementedError:
+            pass
 
+    def execute(self):
+        from choose import Choose
+        available_menuitems = self.get_displayed_menuitems()
+
+        options = [action.display_name for action in available_menuitems]
+        # options += [' '.join(self.hint_word)]
         returncode, index, selected = Choose.run(
-            'Select option', [action.display_name for action in available_actions], [])
+            'Select option', options, [])
         # parse the result, send to service process
 
         if returncode is Choose.CODE.SELECTED:
-            if index == -1:
-                try:
-                    action = self.improvise_action(selected)
-                    if action:
-                        action.execute(state)
-                except NotImplementedError:
-                    pass
-            else:
-                action = available_actions[index]
-                action.execute(state)
+            if index != -1:
+                menuitem = available_menuitems[index]
 
-            
-
+                if isinstance(menuitem, Action):
+                    return menuitem.execute()
+            action = self.action_from_prompt(selected)
+            if action:
+                action.execute()

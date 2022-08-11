@@ -1,11 +1,13 @@
 #!/usr/local/bin/python3
 
-from action import Service
+from typing import List
+from action import Action, Service
 from choose_courses import ChooseCurrentCourse
-from choose_lectures import ChooseLecture
+from choose_lectures import ChooseLecture, CreateLectureService
 from choose_lectures_view import ChooseCompileRange
 # register all services and options
-services = [ChooseCompileRange(),ChooseLecture(),ChooseCurrentCourse()]
+services:List[Service] = [ChooseCompileRange(),ChooseLecture(), CreateLectureService(),ChooseCurrentCourse()]
+
 
 class AllChoicesService(Service):
     def __init__(self):
@@ -14,18 +16,21 @@ class AllChoicesService(Service):
             description = 'All services, to be invoked by global shortcut')
         self.services = services
         
-    def _load_actions(self):
+    def suggested_actions(self):
         actions = []
         for service in self.services:
-            actions.extend(service.get_available_actions(state))
+            actions.extend(service.get_displayed_menuitems())
         return actions
 
+    def action_from_prompt(self, prompt):
+        for service in services:
+            try:
+                action: Action = service.action_from_prompt(prompt)
+                if action:
+                    return action
+            except NotImplementedError:
+                pass
 
-
-class State():
-    pass
-
-state =  State()
 
 if __name__ == '__main__':
-    AllChoicesService().execute(state)
+    AllChoicesService().execute()
