@@ -1,32 +1,31 @@
 #!/usr/local/bin/python3
 
-import choose_courses
-import choose_lectures
-import choose_lectures_view
-from choose import rofi, Rofi
+from action import Service
+from choose_courses import ChooseCurrentCourse
+from choose_lectures import ChooseLecture
+from choose_lectures_view import ChooseCompileRange
 # register all services and options
-services = [choose_courses, choose_lectures, choose_lectures_view]
+services = [ChooseCompileRange(),ChooseLecture(),ChooseCurrentCourse()]
 
-# generate list of all options, pass to choose
-# (service, indice, opt)
-data = []
-for service in services:
-    data += list(zip(
-        [service]*len(service.options),
-        list(range(len(service.options))),
-        service.options))
+class AllChoicesService(Service):
+    def __init__(self):
+        super().__init__(
+            name='ALL',
+            description = 'All services, to be invoked by global shortcut')
+        self.services = services
+        
+    def _load_actions(self):
+        actions = []
+        for service in self.services:
+            actions.extend(service.get_available_actions(state))
+        return actions
 
-returncode, index, selected = rofi('Select option', [option for _,_,option in data], [])
-# parse the result, send to service process
 
-if returncode == Rofi.SELECTED:
-    try:
-        service, serv_index, selected = data[index]
-        service.process(
-            returncode,
-            serv_index,
-            selected
-        )
 
-    except IndexError:
-        pass
+class State():
+    pass
+
+state =  State()
+
+if __name__ == '__main__':
+    AllChoicesService().execute(state)

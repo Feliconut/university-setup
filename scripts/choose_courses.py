@@ -1,26 +1,36 @@
 #!/usr/bin/python3
-from choose import rofi
 
-from courses import Courses
-
-courses = Courses()
-current = courses.current
-
-try:
-    current_index = courses.index(current)
-    args = ['-a', current_index]
-except ValueError:
-    args = []
-
-options = [c.info['title'] for c in courses]
+from courses import Courses, Course
+from action import Action, Service
+from utils import MAX_LEN
 
 
-def process(code, index, selected):
-    print((code, index, selected))
-    if index >= 0:
-        courses.current = courses[index]
+class SetCurrentCourse(Action):
+    def __init__(self, course: Course):
+        self.course = course
+        super().__init__(
+            name='Set current course to {}'.format(course.name),
+            display_name='Focus on {name:<{fill}} ({semester})'.format(
+                name=course.name,
+                fill=MAX_LEN,
+                semester=course.semester),
+            description='Set current course')
+
+    def execute(self, state):
+        self.logger.info(
+            'Setting current course to {}'.format(self.course.name))
+        Courses.current = self.course
+
+
+class ChooseCurrentCourse(Service):
+    def __init__(self):
+        super().__init__(
+            name='choose course',
+            description='Choose current course')
+
+    def _load_actions(self):
+        return [SetCurrentCourse(course) for course in Courses()]
 
 
 if __name__ == '__main__':
-    process(*rofi('Select course', options, [
-    ] + args))
+    ChooseCurrentCourse().execute()

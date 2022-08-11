@@ -1,14 +1,11 @@
 #!/usr/local/bin/python3
 
-import os
-from datetime import datetime
-from pathlib import Path
 import locale
 import re
 import subprocess
+from datetime import datetime
 
-
-from config import get_week, DATE_FORMAT, CURRENT_COURSE_ROOT
+from config import DATE_FORMAT, get_week
 
 # TODO
 #locale.setlocale(locale.LC_TIME, "en_US.utf8")
@@ -52,7 +49,7 @@ class Lecture():
             #"bash",
             #"-c",
             #f"vim --servername purdue --remote-silent ~/Documents/Purdue/current_course/{self.file_path.name}"
-            f"vim --servername purdue --remote-silent {str(self.file_path)}"
+            f"/opt/homebrew/bin/vim --servername purdue --remote-silent {str(self.file_path)}"
         ])
 
     def __str__(self):
@@ -71,26 +68,54 @@ class Lectures(list):
         return sorted((Lecture(f, self.course) for f in files), key=lambda l: l.number)
 
     def parse_lecture_spec(self, string):
-        if len(self) == 0:
-            return 0
-
         if string.isdigit():
             return int(string)
-        elif string == 'last':
+        elif string == 'last' or string == 'current':
             return self[-1].number
         elif string == 'prev':
             return self[-1].number - 1
+        else:
+            raise ValueError(f'Invalid lecture spec: {string}')
 
     def parse_range_string(self, arg):
         all_numbers = [lecture.number for lecture in self]
         if 'all' in arg:
             return all_numbers
 
-        if '-' in arg:
-            start, end = [self.parse_lecture_spec(bit) for bit in arg.split('-')]
-            return list(set(all_numbers) & set(range(start, end + 1)))
+        def filter(ls):
+            return [l for l in ls if l in all_numbers]
 
-        return [self.parse_lecture_spec(arg)]
+        if ',' in arg:
+            res = []
+            for part in arg.split(','): 
+                if part:
+                    res += self.parse_range_string(part) 
+            return res
+        
+        if '-' in arg:
+            nums = arg.split('-')
+            # scan from left to right
+            while nums:
+                try:
+                    if not nums[0]:
+                        nums[0] = 'first'
+                    self.parse_lecture_spec(nums[0])
+                    break
+                except:
+                    del nums[0]
+            while nums:
+                try:
+                    if not nums[-1]:
+                        nums[-1] = 'last'
+                    self.parse_lecture_spec(nums[-1])
+                    break
+                except:
+                    del nums[-1]
+            if nums:
+                return filter(list(range(self.parse_lecture_spec(nums[0]), self.parse_lecture_spec(nums[-1]) + 1)))
+            else:
+                return []
+        return filter([self.parse_lecture_spec(arg)])
 
     @staticmethod
     def get_header_footer(filepath):
@@ -127,6 +152,7 @@ class Lectures(list):
         name = name.strip()
 
         new_lecture_path = self.root / number2filename(new_lecture_number)
+        assert not new_lecture_path.exists()
 
         today = datetime.today()
         date = today.strftime(DATE_FORMAT)

@@ -4,7 +4,7 @@ def beautify(string):
 def unbeautify(string):
     return string.replace(' ', '-').lower()
 
-MAX_LEN = 40
+MAX_LEN = 38
 def generate_short_title(title):
     short_title = title or 'Untitled'
     if len(title) >= MAX_LEN:
@@ -12,3 +12,8 @@ def generate_short_title(title):
     short_title = short_title.replace('$', '')
     return short_title
 
+def recursive_iterdir(path):
+    for entry in path.iterdir():
+        if entry.is_dir():
+            yield entry
+            yield from recursive_iterdir(entry)
