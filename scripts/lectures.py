@@ -49,7 +49,7 @@ class Lecture():
         assert self.course.is_activated
         # TODO remember to set --servername in the editor synctex command also to `purdue`
         subprocess.call([
-            f"source ~/.zshrc; mvim --servername purdue --remote-silent {str(self.file_path)}",
+            f"source ~/.zshrc; mvim --servername purdue --remote-silent \"{str(self.file_path)}\"",
         ], shell=True)
 
     def __str__(self):
@@ -57,6 +57,7 @@ class Lecture():
 
 
 class Lectures(list):
+
     def __init__(self, course):
         self.course = course
         self.root = course.path
@@ -75,14 +76,17 @@ class Lectures(list):
         return sorted((Lecture(f, self.course) for f in files), key=lambda l: l.number)
 
     def parse_lecture_spec(self, string):
-        if string.isdigit():
-            return int(string)
-        elif string == 'last' or string == 'current':
-            return self[-1].number
-        elif string == 'prev':
-            return self[-1].number - 1
-        else:
-            raise ValueError(f'Invalid lecture spec: {string}')
+        try:
+            if string.isdigit():
+                return int(string)
+            elif string == 'last' or string == 'current':
+                return self[-1].number
+            elif string == 'prev':
+                return self[-1].number - 1
+            else:
+                raise ValueError(f'Invalid lecture spec: {string}')
+        except IndexError:
+            raise FileNotFoundError(f'This course is empty')
 
     def parse_range_string(self, arg):
         all_numbers = self.all_numbers
@@ -122,7 +126,10 @@ class Lectures(list):
                 return filter(list(range(self.parse_lecture_spec(nums[0]), self.parse_lecture_spec(nums[-1]) + 1)))
             else:
                 return []
-        return filter([self.parse_lecture_spec(arg)])
+        try:
+            return filter([self.parse_lecture_spec(arg)])
+        except:
+            return []
 
     @staticmethod
     def get_header_footer(filepath):
@@ -196,22 +203,26 @@ class Lectures(list):
         return result.returncode
 
     def open_pdf(self):
-        result = subprocess.run(
-            ['osascript',
-             '-e', 'tell application "Skim" to activate',
-             '-e', 'set theFile to POSIX file "' +
-             str(self.root / 'master.pdf') + '"',
-             '-e', 'set thePath to POSIX path of (theFile as alias)',
-             '-e', 'tell application "Skim"',
-             '-e', 'try',
-             '-e', 'set theDocs to get documents whose path is thePath',
-             '-e', 'if (count of theDocs) > 0 then revert theDocs',
-             '-e', 'end try',
-             '-e', 'open theFile',
-             '-e', 'end tell'
-             ],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            cwd=str(self.root)
-        )
-        return result.returncode
+        if (self.root / 'master.pdf').exists():
+            result = subprocess.run(
+                ['osascript',
+                 '-e', 'tell application "Skim" to activate',
+                 '-e', 'set theFile to POSIX file "' +
+                 str(self.root / 'master.pdf') + '"',
+                 '-e', 'set thePath to POSIX path of (theFile as alias)',
+                 '-e', 'tell application "Skim"',
+                 '-e', 'try',
+                 '-e', 'set theDocs to get documents whose path is thePath',
+                 '-e', 'if (count of theDocs) > 0 then revert theDocs',
+                 '-e', 'end try',
+                 '-e', 'open theFile',
+                 '-e', 'end tell'
+                 ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                cwd=str(self.root)
+            )
+            return result.returncode
+        else:
+            raise FileNotFoundError(
+                f'{self.root / "master.pdf"} not found')
