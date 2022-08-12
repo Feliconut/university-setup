@@ -168,9 +168,105 @@ class Courses():
         except FileNotFoundError:
             return False
 
+
+class Semester():
+    def __init__(self, path: Path):
+        self.path = path
+        self.name = path.stem
+        self._courses = []  # lazy loading
+
+    def __iter__(self):
+        yield from self.courses
+
     @property
-    def all(self):
-        return self.all_courses
+    def courses(self):
+        if len(self._courses) == 0:
+            self._courses = Courses.read_files(self.path)
+        return self._courses
+
+    @property
+    def is_current(self):
+        return os.path.samefile(self.path, CURRENT_SEMESTER_SYMLINK)
+
+    @property
+    def relative_path(self):
+        return self.path.relative_to(ROOT)
+
+    @staticmethod
+    def is_semester(path: Path):
+        if path.is_dir():
+            if len(list(filter(lambda x: x.is_dir(), path.iterdir()))) == 0:  # Empty semester
+                # empty directory with preamble.tex is a semester
+                return (path/'preamble.tex').exists() and not (path / 'master.tex').exists()
+            dirs = filter(lambda x: x.is_dir(), path.iterdir())
+            for p in dirs:
+                if Course.is_course(p):
+                    return True  # directory with a course is a semester
+        return False
 
 
+class Semesters():
+
+    @staticmethod
+    def read_current_semester():
+        'Read the current semester from the symlink, and return a new `Semester` object'
+        try:
+            # 'strict = True' means that an exception is raised if the symlink does not exist
+            return Semester(CURRENT_SEMESTER_SYMLINK.resolve(strict=True))
+        except FileNotFoundError:
+            # if there is at least one semester, set the current semester to the last one
+            semesters = Semesters.read_files()
+            if len(semesters) > 0:
+                Semesters.set_current_semester(semesters[-1])
+                return semesters[-1]
+            else:
+                return None
+
+    @staticmethod
+    def set_current_semester(semester: Semester):
+        'Set the current semester symlink to the given semester'
+        CURRENT_SEMESTER_SYMLINK.unlink(missing_ok=True)
+        CURRENT_SEMESTER_SYMLINK.symlink_to(semester.path)
+
+    @staticmethod
+    def read_files():
+        """
+        Read all semesters in ROOT
+        """
+        semester_directories = [x for x in recursive_iterdir(
+            ROOT) if Semester.is_semester(x)]
+        _semesters = [Semester(path) for path in semester_directories]
+        return sorted(_semesters, key=lambda s: s.name)
+
+    def __init__(self):
+        self._semesters = []  # lazy loading
+        self.read_current_semester()  # ensures that the current semester is set correctly
+
+    def __iter__(self):
+        if self._semesters == []:
+            self._semesters = Semesters.read_files()
+        yield from self._semesters
+
+    @property
+    def current(self):
+        for semester in self:
+            if semester.is_current:
+                return semester
+        raise FileNotFoundError('No current semester')
+
+    @current.setter
+    def current(self, semester: Semester):
+        Semesters.set_current_semester(semester)
+
+    def has_current(self):
+        try:
+            return self.current is not None
+        except FileNotFoundError:
+            return False
+
+
+# Semesters of the current semester, as a default.
+semesters = Semesters()
+
+# Courses of the current semester, as a default.
 courses = Courses()
