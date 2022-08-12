@@ -2,8 +2,6 @@ from action import Action, Service
 from courses import Course, courses
 
 
-current_course = courses.current
-lectures = current_course.lectures
 
 
 class OpenCoursePDF(Action):
