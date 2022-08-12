@@ -2,15 +2,18 @@
 
 from typing import List, Union
 from action import Action, MenuItem, Service
-from choose_courses import ChooseCurrentCourse
+from choose_courses import ChooseCurrentCourse, DisplayCurrentCourse
 from choose_lectures import ChooseLecture, CreateLectureService
 from choose_lectures_view import ChooseCompileRange
+from choose_view_pdf import ChooseCoursePDF
 # register all services and options
 services: List[Union[Service, MenuItem]] = [
     ChooseCompileRange(),
+    DisplayCurrentCourse(),
     ChooseLecture(),
     CreateLectureService(),
     ChooseCurrentCourse(),
+    ChooseCoursePDF(),
 ]
 
 

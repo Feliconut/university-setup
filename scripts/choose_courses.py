@@ -35,5 +35,16 @@ class ChooseCurrentCourse(Service):
         return actions
 
 
+class DisplayCurrentCourse(MenuItem):
+    def __init__(self):
+        super().__init__(
+            name='display current course',
+            display_name='Now on: {name:<{fill}} ({semester})'.format(
+                name=courses.current.name,
+                fill=MAX_LEN,
+                semester=courses.current.semester),
+            description='Display current course')
+
+
 if __name__ == '__main__':
     ChooseCurrentCourse().execute()
