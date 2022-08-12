@@ -41,18 +41,12 @@ class Lecture():
         self.title = title
         self.course = course
 
-
-
     def edit(self):
         assert self.course.is_activated
-        subprocess.run([
-            "iterm.py",
-            #"-e",
-            #"bash",
-            #"-c",
-            #f"vim --servername purdue --remote-silent ~/Documents/Purdue/current_course/{self.file_path.name}"
-            f"/opt/homebrew/bin/vim --servername purdue --remote-silent {str(self.file_path)}"
-        ])
+        # TODO remember to set --servername in the editor synctex command also to `purdue`
+        subprocess.call([
+            f"source ~/.zshrc; mvim --servername purdue --remote-silent {str(self.file_path)}",
+        ], shell=True)
 
     def __str__(self):
         return f'<Lecture {self.course.info["short"]} {self.number} "{self.title}">'
@@ -96,11 +90,11 @@ class Lectures(list):
 
         if ',' in arg:
             res = []
-            for part in arg.split(','): 
+            for part in arg.split(','):
                 if part:
-                    res += self.parse_range_string(part) 
+                    res += self.parse_range_string(part)
             return res
-        
+
         if '-' in arg:
             nums = arg.split('-')
             # scan from left to right
@@ -157,7 +151,7 @@ class Lectures(list):
             new_lecture_number = self[-1].number + 1
         else:
             new_lecture_number = 1
-        
+
         name = name.strip()
 
         new_lecture_path = self.root / number2filename(new_lecture_number)
@@ -176,15 +170,40 @@ class Lectures(list):
 
         self.read_files()
 
-
         l = Lecture(new_lecture_path, self.course)
 
         return l
 
+    def clean_latexmk(self):
+        subprocess.call(['latexmk', '-c'], cwd=str(self.root))
+
     def compile_master(self):
+        # self.clean_latexmk()
         result = subprocess.run(
             # ['pdflatex',str(self.master_file)],
-            ['latexmk', '-f', '-interaction=nonstopmode', str(self.master_file)],
+            ['latexmk', '-f', '-interaction=nonstopmode',
+                str(self.master_file)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            cwd=str(self.root)
+        )
+        return result.returncode
+
+    def open_pdf(self):
+        result = subprocess.run(
+            ['osascript',
+             '-e', 'tell application "Skim" to activate',
+             '-e', 'set theFile to POSIX file "' +
+             str(self.root / 'master.pdf') + '"',
+             '-e', 'set thePath to POSIX path of (theFile as alias)',
+             '-e', 'tell application "Skim"',
+             '-e', 'try',
+             '-e', 'set theDocs to get documents whose path is thePath',
+             '-e', 'if (count of theDocs) > 0 then revert theDocs',
+             '-e', 'end try',
+             '-e', 'open theFile',
+             '-e', 'end tell'
+             ],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             cwd=str(self.root)
