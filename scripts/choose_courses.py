@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 from courses import courses, Course
-from action import Action, Service
+from action import Action, MenuItem, Service
 from utils import MAX_LEN
 
 
@@ -9,12 +9,12 @@ class SetCurrentCourse(Action):
     def __init__(self, course: Course):
         self.course = course
         super().__init__(
-            name='Set current course to {}'.format(course.name),
-            display_name='Focus on {name:<{fill}} ({semester})'.format(
+            name='set current course to {}'.format(course.name),
+            display_name='Switch to {name:<{fill}} ({semester})'.format(
                 name=course.name,
                 fill=MAX_LEN,
                 semester=course.semester),
-            description='Set current course')
+            description='Set the current course')
 
     def execute(self):
         self.logger.info(
@@ -25,7 +25,7 @@ class SetCurrentCourse(Action):
 class ChooseCurrentCourse(Service):
     def __init__(self):
         super().__init__(
-            name='choose course',
+            name='choose current course',
             description='Choose current course')
 
     def suggested_actions(self):

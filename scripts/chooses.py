@@ -18,9 +18,9 @@ class AllChoicesService(Service):
     def __init__(self):
         super().__init__(
             name='ALL',
-            description = 'All services, to be invoked by global shortcut')
+            description='All services, to be invoked by global shortcut')
         self.services = services
-        
+
     def suggested_actions(self):
         actions = []
         for service in self.services:

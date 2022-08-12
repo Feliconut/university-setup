@@ -1,4 +1,5 @@
 import logging
+import sys
 
 
 # Creating and Configuring Logger
@@ -6,8 +7,8 @@ import logging
 Log_Format = "%(levelname)s %(asctime)s - %(message)s"
 
 logging.basicConfig(
-    filename="/Users/xiaoyu/Repos/university-setup/scripts/logfile.log",
-    # stream=sys.stdout,
+    # filename="/Users/xiaoyu/Repos/university-setup/scripts/logfile.log",
+    stream=sys.stdout,
     filemode="w",
     format=Log_Format,
     level=logging.DEBUG)

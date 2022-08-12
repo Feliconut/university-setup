@@ -1,6 +1,7 @@
 #!/usr/local/bin/python3
 
 import locale
+from pathlib import Path
 import re
 import subprocess
 from datetime import datetime
@@ -15,16 +16,19 @@ locale.setlocale(locale.LC_ALL, "en_US")
 def number2filename(n):
     return 'lec_{0:02d}.tex'.format(n)
 
+
 def filename2number(s):
     return int(str(s).replace('.tex', '').replace('lec_', ''))
+
 
 class Lecture():
     def __init__(self, file_path, course):
         with file_path.open() as f:
             for line in f:
-                lecture_match = re.search(r'lecture\{(.*?)\}\{(.*?)\}\{(.*)\}', line)
+                lecture_match = re.search(
+                    r'lecture\{(.*?)\}\{(.*?)\}\{(.*)\}', line)
                 if lecture_match:
-                    break;
+                    break
 
         # number = int(lecture_match.group(1))
 
@@ -56,13 +60,13 @@ class Lectures(list):
     def __init__(self, course):
         self.course = course
         self.root = course.path
-        self.master_file = self.root / 'master.tex'
+        self.master_file: Path = self.root / 'master.tex'
         list.__init__(self, self.read_files())
         self.all_numbers = [lecture.number for lecture in self]
 
     def get_from_number(self, number):
         for lecture in self:
-            lecture:Lecture
+            lecture: Lecture
             if lecture.number == number:
                 return lecture
 
@@ -161,12 +165,14 @@ class Lectures(list):
         date = today.strftime(DATE_FORMAT)
 
         new_lecture_path.touch()
-        new_lecture_path.write_text(f'\\lecture{{{new_lecture_number}}}{{{date}}}{{{name}}}\n')
+        new_lecture_path.write_text(
+            f'\\lecture{{{new_lecture_number}}}{{{date}}}{{{name}}}\n')
 
         if new_lecture_number == 1:
             self.update_lectures_in_master([1])
         else:
-            self.update_lectures_in_master([new_lecture_number - 1, new_lecture_number])
+            self.update_lectures_in_master(
+                [new_lecture_number - 1, new_lecture_number])
 
         self.read_files()
 
