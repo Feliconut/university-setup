@@ -3,7 +3,7 @@ from courses import courses
 
 for course in courses:
         lectures = course.lectures
-        course_title = lectures.course.info["title"]
+        course_title = course.info["title"]
         lines = [r'%&pdflatex',
                  r'\documentclass[a4paper]{article}',
                  r'\input{../preamble.tex}',
@@ -17,5 +17,5 @@ for course in courses:
                 ]
         lectures.master_file.touch()
         lectures.master_file.write_text('\n'.join(lines))
-        (lectures.root / 'master.tex.latexmain').touch()
-        (lectures.root / 'figures').mkdir(exist_ok=True)
+        (lectures.path / 'master.tex.latexmain').touch()
+        (lectures.path / 'figures').mkdir(exist_ok=True)

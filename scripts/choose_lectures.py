@@ -2,6 +2,7 @@
 from action import Action, Service
 from courses import courses
 from lectures import Lecture, Lectures
+from courses import Course
 from utils import generate_short_title, MAX_LEN
 
 current_course = courses.current
@@ -11,7 +12,7 @@ lectures = current_course.lectures
 class OpenLecture(Action):
     'Edit a lecture using vimtex. This action opens a MacVim window with the lecture file.'
 
-    def __init__(self, lecture: Lecture):
+    def __init__(self, lecture: Lecture, course: Course):
         self.lecture = lecture
         super().__init__(
             name='Open lecture {}'.format(lecture.file_path),
@@ -21,7 +22,7 @@ class OpenLecture(Action):
                 title=generate_short_title(lecture.title),
                 date=lecture.date.strftime('%a %d %b'),
                 week=lecture.week,
-                course_short=lecture.course.info['short']
+                course_short=course.info['short']
             )
         )
 
@@ -46,7 +47,7 @@ class CreateLecture(Action):
             'Creating new lecture in {}'.format(current_course.name))
         try:
             new_lecture = lectures.new_doc(name=self.lecture_name)
-            OpenLecture(new_lecture).execute()
+            OpenLecture(new_lecture, current_course).execute()
         except:
             self.logger.exception(
                 'Could not create lecture: {}'.format(self.lecture_name))
@@ -72,14 +73,14 @@ class ChooseLecture(Service):
         self.hint_word = ['Open', 'Lecture']
 
     def suggested_actions(self):
-        return [OpenLecture(lecture) for lecture in lectures]
+        return [OpenLecture(lecture, current_course) for lecture in lectures]
 
     def make_custom_action(self, args):
         if args:
             lecture_number = lectures.parse_doc_spec(args[0])
             if lecture_number in lectures.all_indices:
                 try:
-                    return OpenLecture(lectures.get_from_index(lecture_number))
+                    return OpenLecture(lectures.get_from_index(lecture_number), current_course)
                 except IndexError:
                     pass
 

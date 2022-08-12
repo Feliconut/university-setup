@@ -25,7 +25,7 @@ class Course():
     @property
     def lectures(self):
         if not self._lectures:
-            self._lectures = Lectures(self)
+            self._lectures = Lectures(self.path)
         return self._lectures
 
     @property
@@ -52,8 +52,7 @@ class Course():
 
     def init_all_course_files(self):
         'Initialize all course files.'
-        lectures = self.lectures
-        course_title = lectures.course.info["title"]
+        course_title = self.info["title"]
         lines = [r'%&pdflatex',
                  r'\documentclass[a4paper]{article}',
                  r'\input{../preamble.tex}',
@@ -65,10 +64,10 @@ class Course():
                  fr'    % end lectures',
                  r'\end{document}'
                  ]
-        lectures.master_file.touch()
-        lectures.master_file.write_text('\n'.join(lines))
-        (lectures.root / 'master.tex.latexmain').touch()
-        (lectures.root / 'figures').mkdir(exist_ok=True)
+        self.lectures.master_file.touch()
+        self.lectures.master_file.write_text('\n'.join(lines))
+        (self.lectures.path / 'master.tex.latexmain').touch()
+        (self.lectures.path / 'figures').mkdir(exist_ok=True)
 
 
 class Courses():
