@@ -1,3 +1,6 @@
+from typing import List
+
+
 def beautify(string):
     return string.replace('_', ' ').replace('-', ' ').title()
 
@@ -17,3 +20,13 @@ def recursive_iterdir(path):
         if entry.is_dir():
             yield entry
             yield from recursive_iterdir(entry)
+
+
+def cut_string(string, max_length) -> List[str]:
+    # cut the string into pieces of max_length
+    pieces = []
+    while len(string) > max_length:
+        pieces.append(string[:max_length])
+        string = string[max_length:]
+    pieces.append(string)
+    return pieces
