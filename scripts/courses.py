@@ -2,6 +2,8 @@
 
 import os
 from pathlib import Path
+from shutil import rmtree
+from time import sleep
 
 import yaml
 
@@ -9,6 +11,7 @@ from config import (CURRENT_COURSE_ROOT, CURRENT_COURSE_SYMLINK,
                     CURRENT_COURSE_WATCH_FILE, CURRENT_SEMESTER_SYMLINK, ROOT)
 from lectures import Lectures
 from utils import recursive_iterdir
+from vimtex_popup import wait_vim_edit
 
 
 class Course():
@@ -139,13 +142,21 @@ class Courses():
             'title: ',
             'short: ',
             'url: ']))
+        wait_vim_edit(new_course_path / 'info.yaml')
+        sleep(1)  # wait for vim to finish writing and exiting
 
         course = Course(new_course_path)
         try:
+            course.init_all_course_files()  # yaml must have correct syntax
+            assert course.info['title'].strip()  # must enter a title
+            assert course.info['short'].strip()  # must enter a short name
+
             Courses.set_current_course(course)
             return course
         except:
             print('Wrong info.yaml')
+            rmtree(new_course_path)
+            self.create_course(course_name)
 
     def init_all_course_files(self):
         for course in self:
