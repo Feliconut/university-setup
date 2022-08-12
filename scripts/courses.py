@@ -34,8 +34,8 @@ class Course():
         return self.path == other.path
     @property
     def is_activated(self):
-
-        return CURRENT_COURSE_SYMLINK.resolve()== self.path
+        'Is the course the current course?'
+        return os.path.samefile(self.path, CURRENT_COURSE_SYMLINK)
 
     @property
     def relative_path(self):
@@ -67,16 +67,30 @@ class Courses():
         _courses = [Course(path) for path in course_directories]
         return sorted(_courses, key=lambda c: c.name)
 
+    def _load_courses(self):
+        self.all_courses = Courses.read_files(self.path)
+
     def __init__(self, path=CURRENT_SEMESTER_SYMLINK):
         self.path = path
+        self._load_courses()
 
     def __iter__(self):
-        yield from Courses.read_files(self.path)
+        yield from self.all_courses
 
     @property
     def current(self):
-        return Courses.get_current_course()
+        for course in self:
+            if course.is_activated:
+                return course
+        raise Exception('No current course')
 
     @current.setter
     def current(self, course):
         Courses.set_current_course(course)
+
+    @property
+    def all(self):
+        return self.all_courses
+
+
+courses = Courses()

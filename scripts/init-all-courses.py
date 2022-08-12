@@ -1,7 +1,7 @@
 #!/usr/local/bin/python3
-from courses import Courses
+from courses import courses
 
-for course in Courses():
+for course in courses:
         lectures = course.lectures
         course_title = lectures.course.info["title"]
         lines = [r'\documentclass[a4paper]{article}',

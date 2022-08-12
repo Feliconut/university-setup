@@ -1,13 +1,12 @@
 #!/usr/local/bin/python3
-from courses import Courses
+from courses import courses
 from lectures import Lecture, Lectures
 from utils import generate_short_title, MAX_LEN
 
-current_course = Courses().current
+current_course = courses.current
 lectures = current_course.lectures
 
 
-from courses import Courses
 from action import Action,Service
 
 

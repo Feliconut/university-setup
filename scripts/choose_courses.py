@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from courses import Courses, Course
+from courses import courses, Course
 from action import Action, Service
 from utils import MAX_LEN
 
@@ -19,7 +19,7 @@ class SetCurrentCourse(Action):
     def execute(self):
         self.logger.info(
             'Setting current course to {}'.format(self.course.name))
-        Courses.set_current_course(self.course)
+        courses.set_current_course(self.course)
 
 
 class ChooseCurrentCourse(Service):
@@ -30,7 +30,8 @@ class ChooseCurrentCourse(Service):
 
     def suggested_actions(self):
         actions = []
-        actions += [SetCurrentCourse(course) for course in Courses()]
+        actions += [SetCurrentCourse(course)
+                    for course in courses if course is not courses.current]
         return actions
 
 

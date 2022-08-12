@@ -1,7 +1,7 @@
 #!/usr/local/bin/python3
-from courses import Courses
+from courses import courses
 
-lectures = Courses().current.lectures
+lectures = courses.current.lectures
 
 commands = ['last', 'prev-last', 'all', 'prev']
 cmd_display = ['Current lecture', 'Last two lectures',
@@ -9,7 +9,6 @@ cmd_display = ['Current lecture', 'Last two lectures',
 
 
 
-from courses import Courses, Course
 from action import Action,Service
 
 
