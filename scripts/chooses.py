@@ -18,10 +18,10 @@ services: List[Union[Service, MenuItem]] = [
 
 
 class AllChoicesService(Service):
+    'All services, to be invoked by global shortcut'
+
     def __init__(self):
-        super().__init__(
-            name='ALL',
-            description='All services, to be invoked by global shortcut')
+        super().__init__(name='ALL')
         self.services = services
 
     def suggested_actions(self):

@@ -6,6 +6,8 @@ from utils import MAX_LEN
 
 
 class SetCurrentCourse(Action):
+    'Set the current course to the given course'
+
     def __init__(self, course: Course):
         self.course = course
         super().__init__(
@@ -14,7 +16,7 @@ class SetCurrentCourse(Action):
                 name=course.name,
                 fill=MAX_LEN,
                 semester=course.semester),
-            description='Set the current course')
+        )
 
     def execute(self):
         self.logger.info(
@@ -23,10 +25,12 @@ class SetCurrentCourse(Action):
 
 
 class ChooseCurrentCourse(Service):
+    'Choose current course'
+
     def __init__(self):
         super().__init__(
             name='choose current course',
-            description='Choose current course')
+        )
 
     def suggested_actions(self):
         actions = []
@@ -36,6 +40,8 @@ class ChooseCurrentCourse(Service):
 
 
 class DisplayCurrentCourse(MenuItem):
+    'Display current course'
+
     def __init__(self):
         super().__init__(
             name='display current course',
@@ -43,7 +49,7 @@ class DisplayCurrentCourse(MenuItem):
                 name=courses.current.name,
                 fill=MAX_LEN,
                 semester=courses.current.semester),
-            description='Display current course')
+        )
 
 
 if __name__ == '__main__':

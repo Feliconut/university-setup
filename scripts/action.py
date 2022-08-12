@@ -19,31 +19,41 @@ class Loggable():
         self.logger = logging.getLogger(self.__class__.__name__)
 
 
-class MenuItem():
-    def __init__(self, name, display_name=None, description=None):
+class Describable():
+    def __init__(self):
+        pass
+
+    @property
+    def description(self):
+        if self.__class__.__doc__:
+            return self.__class__.__doc__
+        else:
+            return self.__class__.__name__ + 'has no description'
+
+
+class MenuItem(Describable):
+    def __init__(self, name, display_name=None, ):
         self.name = name  # internal name
         # name as displayed in the menu, may be altered
         self.display_name = display_name if display_name else name
-        self.description = description
 
     def __str__(self):
         return self.name + ' ' + self.description
 
 
 class Action(Loggable, MenuItem):
-    def __init__(self, name, display_name=None, description=None):
+    def __init__(self, name, display_name=None):
         Loggable.__init__(self)
-        MenuItem.__init__(self, name, display_name, description)
+        MenuItem.__init__(self, name, display_name)
 
     def execute(self):
         raise NotImplementedError()
 
 
-class Service(Loggable):
-    def __init__(self, name, description):
+class Service(Loggable, Describable):
+    def __init__(self, name):
         super().__init__()
         self.name = name
-        self.description = description
         self.actions = []
         self.hint_word = []
 
