@@ -25,9 +25,10 @@ if exists_course_current:
 
 if exists_semester_current:
     from choose_view_pdf import ChooseCoursePDF
-    from choose_courses import CreateCourseService
+    from choose_courses import CreateCourseService, ChooseCurrentSemester
     services += [CreateCourseService(),
-                 ChooseCoursePDF(), ]
+                 ChooseCoursePDF(), 
+                 ChooseCurrentSemester(),]
 
 
 class AllChoicesService(Service):

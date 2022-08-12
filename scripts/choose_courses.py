@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
-from courses import courses, Course
 from action import Action, MenuItem, Service
+from courses import Course, Semester, Semesters, courses, semesters
 from utils import MAX_LEN
 
 
@@ -45,12 +45,77 @@ class DisplayCurrentCourse(MenuItem):
     def __init__(self):
         super().__init__(
             name='display current course',
-            display_name='Now on: {name:<{fill}} ({semester})'.format(
+            display_name='Now on: {name:<{fill}}    ({semester})'.format(
                 name=courses.current.name,
                 fill=MAX_LEN,
-                semester=courses.current.semester),
+                semester=courses.current.path.resolve().parent.stem),
         )
 
 
+class CreateCourse(Action):
+    'This action creates a new course in the current semester.'
+
+    def __init__(self, course_name):
+        super().__init__(
+            name='create course',
+            display_name='Create new course',
+        )
+        self.course_name = course_name
+
+    def execute(self):
+        try:
+            self.logger.info('Creating course {}'.format(self.course_name))
+
+            courses.create_course(self.course_name)
+        except Exception:
+            self.logger.exception(
+                'Failed to create course {}'.format(self.course_name))
+
+
+class CreateCourseService(Service):
+    'Create a new course. You must give the name of the course as an argument. If no argument is given, nothing will happen.'
+
+    def __init__(self):
+        super().__init__(
+            name='create course',
+        )
+        self.hint_word = ['New', 'Course']
+
+    def make_custom_action(self, args: list):
+        return CreateCourse(' '.join(args))
+
+
+class SetCurrentSemester(Action):
+    'This action sets the current semester to the given semester.'
+
+    def __init__(self, semester: Semester):
+        self.semester = semester
+        super().__init__(
+            name='set current semester to {}'.format(semester),
+            display_name='Switch to {semester_name}'.format(
+                semester_name=semester.name),
+        )
+
+    def execute(self):
+        self.logger.info(
+            'Setting current semester to {}'.format(self.semester))
+        semesters.set_current_semester(self.semester)
+
+
+class ChooseCurrentSemester(Service):
+    'Choose current semester'
+
+    def __init__(self):
+        super().__init__(
+            name='choose current semester',
+        )
+
+    def suggested_actions(self):
+        actions = []
+        actions += [SetCurrentSemester(semester)
+                    for semester in semesters if semester is not semesters.current]
+        return actions
+
+
 if __name__ == '__main__':
-    ChooseCurrentCourse().execute()
+    ChooseCurrentSemester().execute()
