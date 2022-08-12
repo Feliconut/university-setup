@@ -1,12 +1,17 @@
 #!/usr/local/bin/python3
 
-from typing import List
-from action import Action, Service
+from typing import List, Union
+from action import Action, MenuItem, Service
 from choose_courses import ChooseCurrentCourse
 from choose_lectures import ChooseLecture, CreateLectureService
 from choose_lectures_view import ChooseCompileRange
 # register all services and options
-services:List[Service] = [ChooseCompileRange(),ChooseLecture(), CreateLectureService(),ChooseCurrentCourse()]
+services: List[Union[Service, MenuItem]] = [
+    ChooseCompileRange(),
+    ChooseLecture(),
+    CreateLectureService(),
+    ChooseCurrentCourse(),
+]
 
 
 class AllChoicesService(Service):
@@ -19,17 +24,25 @@ class AllChoicesService(Service):
     def suggested_actions(self):
         actions = []
         for service in self.services:
-            actions.extend(service.get_displayed_menuitems())
+            try:
+                actions.extend(service.get_displayed_menuitems())
+            except AttributeError:  # is a MenuItem instead of a Service
+                assert isinstance(service, MenuItem)
+                actions.append(service)
+                pass
+            except NotImplementedError:
+                pass
         return actions
 
     def action_from_prompt(self, prompt):
         for service in services:
-            try:
-                action: Action = service.action_from_prompt(prompt)
-                if action:
-                    return action
-            except NotImplementedError:
-                pass
+            if isinstance(service, Service):
+                try:
+                    action: Action = service.action_from_prompt(prompt)
+                    if action:
+                        return action
+                except NotImplementedError:
+                    pass
 
 
 if __name__ == '__main__':
