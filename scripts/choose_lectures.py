@@ -9,7 +9,7 @@ lectures = current_course.lectures
 
 
 class OpenLecture(Action):
-    'Edit a lecture using vimtex'
+    'Edit a lecture using vimtex. This action opens a MacVim window with the lecture file.'
 
     def __init__(self, lecture: Lecture):
         self.lecture = lecture
@@ -31,7 +31,8 @@ class OpenLecture(Action):
 
 
 class CreateLecture(Action):
-    'Create a new lecture in the current course'
+    '''Create a new lecture in the current course. The 
+    lecture will be opened in vimtex.'''
 
     def __init__(self, name=''):
         self.lecture_name = name
@@ -52,7 +53,7 @@ class CreateLecture(Action):
 
 
 class CreateLectureService(Service):
-    'Create Lecture'
+    '''Create a new lecture in the current course. The lecture will be opened in vimtex. The lecture name is given as an argument. If no argument is given, the name will be empty.'''
 
     def __init__(self):
         super().__init__(name='create lecture')
@@ -63,7 +64,7 @@ class CreateLectureService(Service):
 
 
 class ChooseLecture(Service):
-    'Choose lectures to open from current course'
+    '''Choose a lecture from the current course. The lecture will be opened in vimtex. The lecture number is given as an argument. If no argument is given, nothing will happen.'''
 
     def __init__(self):
         super().__init__(

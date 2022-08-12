@@ -10,7 +10,7 @@ cmd_display = ['Current lecture', 'Last two lectures',
 
 
 class SetCompileRange(Action):
-    'Set compile range'
+    'Set the compile range, i.e. the range of lectures to include in the compiled pdf'
 
     def __init__(self, range: str, range_display: str):
         self.range = range
@@ -27,7 +27,9 @@ class SetCompileRange(Action):
 
 
 class ChooseCompileRange(Service):
-    'Choose compile range'
+    '''Choose compile range. You may use "," to separate the range, e.g. "1,2,3,4,5". You may use "-" to indicate a range, e.g. "1-5". You may use "all" to include all lectures. You may use "last", "prev-last", "prev" to include the last, the last two, or the previous lectures.
+    Note: duplication of lecture numbers is allowed.
+    '''
 
     def __init__(self):
         super().__init__(

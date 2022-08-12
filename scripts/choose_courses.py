@@ -6,7 +6,7 @@ from utils import MAX_LEN
 
 
 class SetCurrentCourse(Action):
-    'Set the current course to the given course'
+    'This action sets the current course to the given course. Only one course can be current at a time.'
 
     def __init__(self, course: Course):
         self.course = course
@@ -40,7 +40,7 @@ class ChooseCurrentCourse(Service):
 
 
 class DisplayCurrentCourse(MenuItem):
-    'Display current course'
+    'This is the current course.'
 
     def __init__(self):
         super().__init__(

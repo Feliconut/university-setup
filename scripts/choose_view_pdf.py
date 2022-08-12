@@ -7,7 +7,7 @@ lectures = current_course.lectures
 
 
 class OpenCoursePDF(Action):
-    'Open the course PDF'
+    'Open the compiled PDF of this course.'
 
     def __init__(self, course: Course):
         self.course = course
@@ -22,7 +22,7 @@ class OpenCoursePDF(Action):
 
 
 class ChooseCoursePDF(Service):
-    'Choose the course PDF'
+    'Choose the course name whose PDF should be opened.'
 
     def __init__(self):
         super().__init__(
