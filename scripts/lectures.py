@@ -5,6 +5,7 @@ from pathlib import Path
 import re
 import subprocess
 from datetime import datetime
+from typing import List
 
 from config import DATE_FORMAT, get_week
 
@@ -13,12 +14,18 @@ from config import DATE_FORMAT, get_week
 locale.setlocale(locale.LC_ALL, "en_US")
 
 
-def number2filename(n):
-    return 'lec_{0:02d}.tex'.format(n)
+class DocIndexSystem():
+    ''' The trivial index system for the documents.'''
+
+    class DocIndex(int):
+        pass
+
+    def number2filename(n:DocIndex) -> str:
+        return 'lec_{0:02d}.tex'.format(n)
 
 
-def filename2number(s):
-    return int(str(s).replace('.tex', '').replace('lec_', ''))
+    def filename2number(s:str) -> DocIndex:
+        return int(str(s).replace('.tex', '').replace('lec_', ''))
 
 
 class Lecture():
@@ -31,8 +38,6 @@ class Lecture():
                 if doc_match:
                     break
 
-        # number = int(lecture_match.group(1))
-
         date_str = doc_match.group(2)
         date = datetime.strptime(date_str, DATE_FORMAT)
         week = get_week(date)
@@ -42,7 +47,7 @@ class Lecture():
         self.file_path = file_path
         self.date = date
         self.week = week
-        self.number = filename2number(file_path.stem)
+        self.index = DocIndexSystem.filename2number(file_path.stem)
         self.title = title
         self.course = course
 
@@ -54,49 +59,56 @@ class Lecture():
         ], shell=True)
 
     def __str__(self):
-        return f'<{self.doc_type_name.capitalize()} {self.course.info["short"]} {self.number} "{self.title}">'
+        return f'<{self.doc_type_name.capitalize()} {self.course.info["short"]} {self.index} "{self.title}">'
 
 
-class Lectures(list):
+class Lectures():
     doc_type_name = 'lecture'
+
 
     def __init__(self, course):
         self.course = course
         self.root = course.path
         self.master_file: Path = self.root / 'master.tex'
-        list.__init__(self, self.read_files())
-        self.all_numbers = [doc.number for doc in self]
+        self.documents = self.read_files()
+        self.all_indices = [doc.index for doc in self.documents]
 
-    def get_from_number(self, number):
+    def __iter__(self):
+        return iter(self.documents)
+
+    def __len__(self):
+        return len(self.documents)
+
+    def get_from_index(self, index:DocIndexSystem.DocIndex):
         for doc in self:
             doc: Lecture
-            if doc.number == number:
+            if doc.index == index:
                 return doc
 
     def read_files(self):
         files = self.root.glob('lec_*.tex')
-        return sorted((Lecture(f, self.course) for f in files), key=lambda l: l.number)
+        return sorted((Lecture(f, self.course) for f in files), key=lambda l: l.index)
 
     def parse_doc_spec(self, string):
         try:
             if string.isdigit():
                 return int(string)
             elif string == 'last' or string == 'current':
-                return self[-1].number
+                return self.documents[-1].index
             elif string == 'prev':
-                return self[-1].number - 1
+                return self.documents[-1].index - 1
             else:
                 raise ValueError(f'Invalid spec: {string}')
         except IndexError:
             raise FileNotFoundError(f'This course is empty')
 
     def parse_range_string(self, arg):
-        all_numbers = self.all_numbers
+        all_index = self.all_indices
         if 'all' in arg:
-            return all_numbers
+            return all_index
 
         def filter(ls):
-            return [l for l in ls if l in all_numbers]
+            return [l for l in ls if l in all_index]
 
         if ',' in arg:
             res = []
@@ -153,21 +165,21 @@ class Lectures(list):
                     part = 1
         return (header, footer)
 
-    def update_docs_in_master(self, r):
+    def update_docs_in_master(self, r :List[DocIndexSystem.DocIndex]):
         header, footer = self.get_header_footer(self.master_file)
         body = ''.join(
-            ' ' * 4 + r'\input{' + number2filename(number) + '}\n' for number in r)
+            ' ' * 4 + r'\input{' + DocIndexSystem.number2filename(index) + '}\n' for index in r)
         self.master_file.write_text(header + body + footer)
 
     def new_doc(self, name):
         if len(self) != 0:
-            new_doc_number = self[-1].number + 1
+            new_doc_index = self.documents[-1].index + 1
         else:
-            new_doc_number = 1
+            new_doc_index = 1
 
         name = name.strip()
 
-        new_doc_path = self.root / number2filename(new_doc_number)
+        new_doc_path = self.root / DocIndexSystem.number2filename(new_doc_index)
         assert not new_doc_path.exists()
 
         today = datetime.today()
@@ -175,13 +187,13 @@ class Lectures(list):
 
         new_doc_path.touch()
         new_doc_path.write_text(
-            f'\\{self.doc_type_name}{{{new_doc_number}}}{{{date}}}{{{name}}}\n')
+            f'\\{self.doc_type_name}{{{new_doc_index}}}{{{date}}}{{{name}}}\n')
 
-        if new_doc_number == 1:
+        if new_doc_index == 1:
             self.update_docs_in_master([1])
         else:
             self.update_docs_in_master(
-                [new_doc_number - 1, new_doc_number])
+                [new_doc_index - 1, new_doc_index])
 
         self.read_files()
 

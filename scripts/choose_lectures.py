@@ -17,7 +17,7 @@ class OpenLecture(Action):
             name='Open lecture {}'.format(lecture.file_path),
             display_name="Open {number: >2}. {title: <{fill}} {date}  ({week})".format(
                 fill=MAX_LEN,
-                number=lecture.number,
+                number=lecture.index,
                 title=generate_short_title(lecture.title),
                 date=lecture.date.strftime('%a %d %b'),
                 week=lecture.week,
@@ -77,9 +77,9 @@ class ChooseLecture(Service):
     def make_custom_action(self, args):
         if args:
             lecture_number = lectures.parse_doc_spec(args[0])
-            if lecture_number in lectures.all_numbers:
+            if lecture_number in lectures.all_indices:
                 try:
-                    return OpenLecture(lectures.get_from_number(lecture_number))
+                    return OpenLecture(lectures.get_from_index(lecture_number))
                 except IndexError:
                     pass
 
