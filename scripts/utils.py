@@ -1,13 +1,18 @@
-from typing import List
+from pathlib import Path
+from typing import Generator, List
 
 
 def beautify(string):
     return string.replace('_', ' ').replace('-', ' ').title()
 
+
 def unbeautify(string):
     return string.replace(' ', '-').lower()
 
+
 MAX_LEN = 38
+
+
 def generate_short_title(title):
     short_title = title or 'Untitled'
     if len(title) >= MAX_LEN:
@@ -15,7 +20,8 @@ def generate_short_title(title):
     short_title = short_title.replace('$', '')
     return short_title
 
-def recursive_iterdir(path):
+
+def recursive_iterdir(path: Path) -> Generator[Path, None, None]:
     for entry in path.iterdir():
         if entry.is_dir():
             yield entry

@@ -45,7 +45,7 @@ class CreateLecture(Action):
         self.logger.info(
             'Creating new lecture in {}'.format(current_course.name))
         try:
-            new_lecture = lectures.new_lecture(name=self.lecture_name)
+            new_lecture = lectures.new_doc(name=self.lecture_name)
             OpenLecture(new_lecture).execute()
         except:
             self.logger.exception(
@@ -76,7 +76,7 @@ class ChooseLecture(Service):
 
     def make_custom_action(self, args):
         if args:
-            lecture_number = lectures.parse_lecture_spec(args[0])
+            lecture_number = lectures.parse_doc_spec(args[0])
             if lecture_number in lectures.all_numbers:
                 try:
                     return OpenLecture(lectures.get_from_number(lecture_number))

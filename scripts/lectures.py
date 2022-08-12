@@ -22,21 +22,22 @@ def filename2number(s):
 
 
 class Lecture():
+    doc_type_name = 'lecture'
     def __init__(self, file_path, course):
         with file_path.open() as f:
             for line in f:
-                lecture_match = re.search(
-                    r'lecture\{(.*?)\}\{(.*?)\}\{(.*)\}', line)
-                if lecture_match:
+                doc_match = re.search(
+                    self.doc_type_name + r'\{(.*?)\}\{(.*?)\}\{(.*)\}', line)
+                if doc_match:
                     break
 
         # number = int(lecture_match.group(1))
 
-        date_str = lecture_match.group(2)
+        date_str = doc_match.group(2)
         date = datetime.strptime(date_str, DATE_FORMAT)
         week = get_week(date)
 
-        title = lecture_match.group(3)
+        title = doc_match.group(3)
 
         self.file_path = file_path
         self.date = date
@@ -53,29 +54,30 @@ class Lecture():
         ], shell=True)
 
     def __str__(self):
-        return f'<Lecture {self.course.info["short"]} {self.number} "{self.title}">'
+        return f'<{self.doc_type_name.capitalize()} {self.course.info["short"]} {self.number} "{self.title}">'
 
 
 class Lectures(list):
+    doc_type_name = 'lecture'
 
     def __init__(self, course):
         self.course = course
         self.root = course.path
         self.master_file: Path = self.root / 'master.tex'
         list.__init__(self, self.read_files())
-        self.all_numbers = [lecture.number for lecture in self]
+        self.all_numbers = [doc.number for doc in self]
 
     def get_from_number(self, number):
-        for lecture in self:
-            lecture: Lecture
-            if lecture.number == number:
-                return lecture
+        for doc in self:
+            doc: Lecture
+            if doc.number == number:
+                return doc
 
     def read_files(self):
         files = self.root.glob('lec_*.tex')
         return sorted((Lecture(f, self.course) for f in files), key=lambda l: l.number)
 
-    def parse_lecture_spec(self, string):
+    def parse_doc_spec(self, string):
         try:
             if string.isdigit():
                 return int(string)
@@ -84,7 +86,7 @@ class Lectures(list):
             elif string == 'prev':
                 return self[-1].number - 1
             else:
-                raise ValueError(f'Invalid lecture spec: {string}')
+                raise ValueError(f'Invalid spec: {string}')
         except IndexError:
             raise FileNotFoundError(f'This course is empty')
 
@@ -110,7 +112,7 @@ class Lectures(list):
                 try:
                     if not nums[0]:
                         nums[0] = 'first'
-                    self.parse_lecture_spec(nums[0])
+                    self.parse_doc_spec(nums[0])
                     break
                 except:
                     del nums[0]
@@ -118,16 +120,16 @@ class Lectures(list):
                 try:
                     if not nums[-1]:
                         nums[-1] = 'last'
-                    self.parse_lecture_spec(nums[-1])
+                    self.parse_doc_spec(nums[-1])
                     break
                 except:
                     del nums[-1]
             if nums:
-                return filter(list(range(self.parse_lecture_spec(nums[0]), self.parse_lecture_spec(nums[-1]) + 1)))
+                return filter(list(range(self.parse_doc_spec(nums[0]), self.parse_doc_spec(nums[-1]) + 1)))
             else:
                 return []
         try:
-            return filter([self.parse_lecture_spec(arg)])
+            return filter([self.parse_doc_spec(arg)])
         except:
             return []
 
@@ -151,39 +153,39 @@ class Lectures(list):
                     part = 1
         return (header, footer)
 
-    def update_lectures_in_master(self, r):
+    def update_docs_in_master(self, r):
         header, footer = self.get_header_footer(self.master_file)
         body = ''.join(
             ' ' * 4 + r'\input{' + number2filename(number) + '}\n' for number in r)
         self.master_file.write_text(header + body + footer)
 
-    def new_lecture(self, name):
+    def new_doc(self, name):
         if len(self) != 0:
-            new_lecture_number = self[-1].number + 1
+            new_doc_number = self[-1].number + 1
         else:
-            new_lecture_number = 1
+            new_doc_number = 1
 
         name = name.strip()
 
-        new_lecture_path = self.root / number2filename(new_lecture_number)
-        assert not new_lecture_path.exists()
+        new_doc_path = self.root / number2filename(new_doc_number)
+        assert not new_doc_path.exists()
 
         today = datetime.today()
         date = today.strftime(DATE_FORMAT)
 
-        new_lecture_path.touch()
-        new_lecture_path.write_text(
-            f'\\lecture{{{new_lecture_number}}}{{{date}}}{{{name}}}\n')
+        new_doc_path.touch()
+        new_doc_path.write_text(
+            f'\\{self.doc_type_name}{{{new_doc_number}}}{{{date}}}{{{name}}}\n')
 
-        if new_lecture_number == 1:
-            self.update_lectures_in_master([1])
+        if new_doc_number == 1:
+            self.update_docs_in_master([1])
         else:
-            self.update_lectures_in_master(
-                [new_lecture_number - 1, new_lecture_number])
+            self.update_docs_in_master(
+                [new_doc_number - 1, new_doc_number])
 
         self.read_files()
 
-        l = Lecture(new_lecture_path, self.course)
+        l = Lecture(new_doc_path, self.course)
 
         return l
 
