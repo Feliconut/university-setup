@@ -30,13 +30,6 @@ class DocIndexSystem():
         def from_filename(cls, filename: str):
             raise NotImplementedError()
 
-    @classmethod
-    def titleline_pattern(cls, index: DocIndex) -> str:
-        raise NotImplementedError()
-
-    @staticmethod
-    def tex_cmd_first_part(x: DocIndex) -> str:
-        raise NotImplementedError()
 
     @classmethod
     def match_range(cls, string, all_index) -> List[DocIndex]:
@@ -80,6 +73,23 @@ class DocIndexSystem():
         except:
             return []
 
+    @staticmethod
+    def parse_defline(defline: str) -> List[str]:
+        'Parse the defline and return the info. Throw an exception if the defline is invalid.'
+        raise NotImplementedError()
+
+    @staticmethod
+    def make_defline(index: DocIndex, date:str, title:str) -> str:
+        'The info is (index, date, title)'
+        raise NotImplementedError()
+
+    @classmethod
+    def range(cls, start: DocIndex, end: DocIndex) -> List[DocIndex]:
+        'Return a list of indices in the range [start, end]'
+        raise NotImplementedError()
+    @classmethod
+    def new_index(cls, all_indices: List[DocIndex], *args) -> DocIndex:
+        raise NotImplementedError()
 
 class LinearLectureIndexSystem(DocIndexSystem):
     ''' The trivial index system for the documents.
@@ -100,20 +110,32 @@ class LinearLectureIndexSystem(DocIndexSystem):
         def __add__(self, __x: int):
             return self.__class__(super().__add__(__x))
 
-    @classmethod
-    def titleline_pattern(cls, index: DocIndex) -> str:
-        return 'lecture' + r'\{(.*?)\}\{(.*?)\}\{(.*)\}' #  TODO the 'lecture' part need to be generalized
+    @staticmethod
+    def is_filename_valid(filename: str) -> bool:
+        try:
+            re.search('^lec_(.*).tex$', str(filename)).group(1).isdigit()
+            return True
+        except (AttributeError, IndexError):
+            return False
 
     @staticmethod
-    def tex_cmd_first_part(n: DocIndex) -> str:
-        return '\\lecture' + '{' + str(n) + '}'
+    def parse_defline(defline: str) -> List[str]:
+        'Parse the defline and return the info. Throw an exception if the defline is invalid.'
+        # \lecture{1}{Sat 13 Aug 2022 02:07}{lecture title}
+        m = re.match(r'^\\lecture\{(.*?)\}\{(.*?)\}\{(.*?)\}$', defline.strip())
+        return [m.group(1), m.group(2), m.group(3)] # throw error if not matched
+
+    @staticmethod
+    def make_defline(index: DocIndex, date:str, title:str) -> str:
+        'The info is (index, date, title)'
+        return '\\lecture' + '{' + str(index) + '}' + '{' + date + '}' + '{' + title + '}'
 
     @classmethod
     def range(cls, start: DocIndex, end: DocIndex) -> List[DocIndex]:
         return [cls.DocIndex(i) for i in range(start, end + 1)]
 
     @classmethod
-    def new_index(cls, all_indices: List[DocIndex]):
+    def new_index(cls, all_indices: List[DocIndex], *args) -> DocIndex:
         return max(all_indices, default=cls.DocIndex(0)) + 1
 
     @staticmethod
@@ -127,34 +149,30 @@ class LinearLectureIndexSystem(DocIndexSystem):
 
 
 class Lecture():
-    def __init__(self, file_path: Path):
+    def __init__(self, file_path: Path, index_system: DocIndexSystem = LinearLectureIndexSystem()):
         # read index from filenumber
-        self.index = LinearLectureIndexSystem.DocIndex.from_filename(
+        self.index_system = index_system
+        self.index = index_system.DocIndex.from_filename(
             file_path.stem)
 
         with file_path.open('r+') as f:
             for line in f:
-                doc_match = re.search(
-                    LinearLectureIndexSystem.titleline_pattern(self.index), line)
-                if doc_match:
+                try:
+                    index_str, date_str, title = index_system.parse_defline(line)
                     break
-            
+                except IndexError:
+                    pass
             else:
                 # no match. create title line
 
-                # \lecture{1}{Sat 13 Aug 2022 02:07}{}
-                title_line = f'{LinearLectureIndexSystem.tex_cmd_first_part(self.index)}{{{datetime.now().strftime(DATE_FORMAT)}}}{{}}\n'
+                title_line = index_system.make_defline(self.index, datetime.now().strftime(DATE_FORMAT), '')
                 f.seek(0,0) # point to the beginning of the file
                 f.write(title_line)
 
-                doc_match = re.search(
-                    LinearLectureIndexSystem.titleline_pattern(self.index), title_line)
+                index_str, date_str, title = index_system.parse_defline(title_line)
 
-        date_str = doc_match.group(2)
         date = datetime.strptime(date_str, DATE_FORMAT)
         week = get_week(date)
-
-        title = doc_match.group(3)
 
         self.file_path = file_path
         self.date = date
@@ -263,8 +281,7 @@ class Lectures():
 
         # assign a new index to the new document
         new_doc_index = LinearLectureIndexSystem.new_index(self.all_indices)
-        new_doc_path = self.path / \
-            new_doc_index.to_filename()
+        new_doc_path = self.path / new_doc_index.to_filename()
         assert not new_doc_path.exists()
 
         today = datetime.today()
@@ -273,7 +290,7 @@ class Lectures():
         # write new document
         new_doc_path.touch()
         new_doc_path.write_text(
-            f'{LinearLectureIndexSystem.tex_cmd_first_part(new_doc_index)}{{{date}}}{{{name}}}\n')
+            LinearLectureIndexSystem.make_defline(new_doc_index, date, name))
 
         # update master.tex
         _, indices, _ = self.parse_master_range(self.master_file)
