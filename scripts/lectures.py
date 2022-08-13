@@ -35,7 +35,7 @@ class DocIndexSystem():
         raise NotImplementedError()
 
     @staticmethod
-    def tex_cmd_name(x: DocIndex) -> str:
+    def tex_cmd_first_part(x: DocIndex) -> str:
         raise NotImplementedError()
 
     @classmethod
@@ -83,10 +83,8 @@ class DocIndexSystem():
 
 class LinearLectureIndexSystem(DocIndexSystem):
     ''' The trivial index system for the documents.
-    There is a 1-1 isomorphism between the indices and the filenames.
-    There is an injection from indices to tex_cmd_name values.'''
-
-    index_pattern = 'lec_*.tex'
+    There is a 1-1 isomorphism between the indices and the valid filenames.
+    '''
 
     class DocIndex(int, DocIndexSystem.DocIndex):
         def to_filename(self) -> str:
@@ -104,10 +102,10 @@ class LinearLectureIndexSystem(DocIndexSystem):
 
     @classmethod
     def titleline_pattern(cls, index: DocIndex) -> str:
-        return 'lecture' + r'\{(.*?)\}\{(.*?)\}\{(.*)\}'
+        return 'lecture' + r'\{(.*?)\}\{(.*?)\}\{(.*)\}' #  TODO the 'lecture' part need to be generalized
 
     @staticmethod
-    def tex_cmd_name(n: DocIndex) -> str:
+    def tex_cmd_first_part(n: DocIndex) -> str:
         return '\\lecture' + '{' + str(n) + '}'
 
     @classmethod
@@ -117,6 +115,15 @@ class LinearLectureIndexSystem(DocIndexSystem):
     @classmethod
     def new_index(cls, all_indices: List[DocIndex]):
         return max(all_indices, default=cls.DocIndex(0)) + 1
+
+    @staticmethod
+    def is_filename_valid(filename: str) -> bool:
+        try:
+            re.search('^lec_(.*).tex$', str(filename)).group(1).isdigit()
+            return True
+        except (AttributeError, IndexError):
+            return False
+
 
 
 class Lecture():
@@ -131,6 +138,17 @@ class Lecture():
                     LinearLectureIndexSystem.titleline_pattern(self.index), line)
                 if doc_match:
                     break
+            
+            else:
+                # no match. create title line
+
+                # \lecture{1}{Sat 13 Aug 2022 02:07}{}
+                title_line = f'{LinearLectureIndexSystem.tex_cmd_first_part(self.index)}{{{datetime.now().strftime(DATE_FORMAT)}}}{{}}\n'
+                f.seek(0,0) # point to the beginning of the file
+                f.write(title_line)
+
+                doc_match = re.search(
+                    LinearLectureIndexSystem.titleline_pattern(self.index), title_line)
 
         date_str = doc_match.group(2)
         date = datetime.strptime(date_str, DATE_FORMAT)
@@ -172,7 +190,7 @@ class Lectures():
                 return doc
 
     def read_files(self):
-        files = self.path.glob(LinearLectureIndexSystem.index_pattern)
+        files = [file for file in self.path.iterdir() if LinearLectureIndexSystem.is_filename_valid(file.name)]
         return sorted((Lecture(f) for f in files), key=lambda l: l.index)
 
     def parse_doc_spec(self, string: str) -> LinearLectureIndexSystem.DocIndex:
@@ -255,7 +273,7 @@ class Lectures():
         # write new document
         new_doc_path.touch()
         new_doc_path.write_text(
-            f'\\{LinearLectureIndexSystem.tex_cmd_name(new_doc_index)}{{{date}}}{{{name}}}\n')
+            f'{LinearLectureIndexSystem.tex_cmd_first_part(new_doc_index)}{{{date}}}{{{name}}}\n')
 
         # update master.tex
         _, indices, _ = self.parse_master_range(self.master_file)
