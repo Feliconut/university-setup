@@ -31,46 +31,8 @@ class DocIndexSystem():
             raise NotImplementedError()
 
     @classmethod
-    def match_range(cls, string, all_index) -> List[DocIndex]:
-
-        def filter(ls):
-            return [l for l in ls if l in all_index]
-
-        if ',' in string:
-            res = []
-            for part in string.split(','):
-                if part:
-                    res += cls.match_range(part)
-            return res
-
-        if '-' in string:
-            num_strs = string.split('-')
-            # scan from left to right
-            while num_strs:
-                try:
-                    if not num_strs[0]:
-                        num_strs[0] = 'first'
-                    cls.DocIndex(num_strs[0])
-                    break
-                except:
-                    del num_strs[0]
-            while num_strs:
-                try:
-                    if not num_strs[-1]:
-                        num_strs[-1] = 'last'
-                    cls.DocIndex(num_strs[-1])
-                    break
-                except:
-                    del num_strs[-1]
-            if num_strs:
-                indices = [cls.DocIndex(n) for n in num_strs]
-                return list(map(cls.DocIndex, filter(cls.range(indices[0], indices[-1]))))
-            else:
-                return []
-        try:
-            return filter([cls.DocIndex(string)])
-        except:
-            return []
+    def match_range(cls, string: str, all_index: List[DocIndex]) -> List[DocIndex]:
+        raise NotImplementedError()
 
     @staticmethod
     def parse_defline(defline: str) -> List[str]:
@@ -134,21 +96,63 @@ class LinearLectureIndexSystem(DocIndexSystem):
         return '\\lecture' + '{' + str(index) + '}' + '{' + date + '}' + '{' + title + '}'
 
     @classmethod
+    def match_range(cls, string: str, all_index: List[DocIndex]) -> List[DocIndex]:
+        string = string.replace('current', 'last')  # an alias
+
+        if 'all' in string:
+            return all_index
+
+        # implicitly check if there are enough index entries
+        string = string.replace('first', str(all_index[0]))
+        string = string.replace('last', str(all_index[-1]))
+        string = string.replace('prev', str(all_index[-2]))
+
+        def filter(ls):
+            return [l for l in ls if l in all_index]
+
+        if ',' in string:
+            res = []
+            for part in string.split(','):
+                if part:
+                    res += cls.match_range(part)
+            return res
+
+        if '-' in string:
+            num_strs = string.split('-')
+            # scan from left to right
+            while num_strs:
+                try:
+                    if not num_strs[0]:
+                        num_strs[0] = 'first'
+                    cls.DocIndex(num_strs[0])
+                    break
+                except:
+                    del num_strs[0]
+            while num_strs:
+                try:
+                    if not num_strs[-1]:
+                        num_strs[-1] = 'last'
+                    cls.DocIndex(num_strs[-1])
+                    break
+                except:
+                    del num_strs[-1]
+            if num_strs:
+                indices = [cls.DocIndex(n) for n in num_strs]
+                return list(map(cls.DocIndex, filter(cls.range(indices[0], indices[-1]))))
+            else:
+                return []
+        try:
+            return filter([cls.DocIndex(string)])
+        except:
+            return []
+
+    @classmethod
     def range(cls, start: DocIndex, end: DocIndex) -> List[DocIndex]:
         return [cls.DocIndex(i) for i in range(start, end + 1)]
 
     @classmethod
     def new_index(cls, all_indices: List[DocIndex], *args) -> DocIndex:
         return max(all_indices, default=cls.DocIndex(0)) + 1
-
-    @staticmethod
-    def is_filename_valid(filename: str) -> bool:
-        try:
-            re.search('^lec_(.*).tex$', str(filename)).group(1).isdigit()
-            return True
-        except (AttributeError, IndexError):
-            return False
-
 
 
 class Lecture():
@@ -222,30 +226,16 @@ class Lectures():
 
     def parse_doc_spec(self, string: str) -> DocIndexSystem.DocIndex:
         all_index = self.all_indices
-
         try:
-            string = (string
-                      .replace('last', str(all_index[-1]))
-                      .replace('current', str(all_index[-1]))
-                      .replace('prev', str(all_index[-2])))
-            try:
-                # may not be in all_index
-                return self.index_system.DocIndex(string)
-            except:
-                raise ValueError(f'Invalid spec: {string}')
+            return self.index_system.match_range(all_index, string+'-'+string)[0]
         except IndexError:
-            raise FileNotFoundError(f'This course is empty')
+            raise FileNotFoundError(
+                f'No file found for {string}. The course may be empty.')
+        except:
+            raise ValueError(f'Invalid index {string}')
 
     def parse_range_string(self, string: str) -> List[DocIndexSystem.DocIndex]:
         all_index = self.all_indices
-
-        if 'all' in string:
-            return all_index
-        string = (string
-                  .replace('last', str(all_index[-1]))
-                  .replace('current', str(all_index[-1]))
-                  .replace('prev', str(all_index[-2])))
-
         return self.index_system.match_range(string, all_index)
 
     def parse_master_range(self, filepath) -> Tuple[str, List[DocIndexSystem.DocIndex], str]:
