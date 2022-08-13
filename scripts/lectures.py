@@ -164,7 +164,7 @@ class Lecture():
     def edit(self):
         # TODO remember to set --servername in the editor synctex command also to `purdue`
         subprocess.call([
-            f"source ~/.zshrc; mvim --servername purdue --remote-silent \"{str(self.file_path)}\"",
+            f"source ~/.zshrc; mvim -c \"lcd {str(self.file_path.parent)}\" --servername purdue --remote-silent \"{str(self.file_path)}\"",
         ], shell=True)
 
     def __str__(self):
