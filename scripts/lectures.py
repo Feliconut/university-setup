@@ -5,7 +5,7 @@ from pathlib import Path
 import re
 import subprocess
 from datetime import datetime
-from typing import List
+from typing import List, Tuple
 
 from config import DATE_FORMAT, get_week
 
@@ -29,7 +29,6 @@ class DocIndexSystem():
         @classmethod
         def from_filename(cls, filename: str):
             raise NotImplementedError()
-
 
     @classmethod
     def match_range(cls, string, all_index) -> List[DocIndex]:
@@ -79,7 +78,7 @@ class DocIndexSystem():
         raise NotImplementedError()
 
     @staticmethod
-    def make_defline(index: DocIndex, date:str, title:str) -> str:
+    def make_defline(index: DocIndex, date: str, title: str) -> str:
         'The info is (index, date, title)'
         raise NotImplementedError()
 
@@ -87,9 +86,11 @@ class DocIndexSystem():
     def range(cls, start: DocIndex, end: DocIndex) -> List[DocIndex]:
         'Return a list of indices in the range [start, end]'
         raise NotImplementedError()
+
     @classmethod
     def new_index(cls, all_indices: List[DocIndex], *args) -> DocIndex:
         raise NotImplementedError()
+
 
 class LinearLectureIndexSystem(DocIndexSystem):
     ''' The trivial index system for the documents.
@@ -122,11 +123,13 @@ class LinearLectureIndexSystem(DocIndexSystem):
     def parse_defline(defline: str) -> List[str]:
         'Parse the defline and return the info. Throw an exception if the defline is invalid.'
         # \lecture{1}{Sat 13 Aug 2022 02:07}{lecture title}
-        m = re.match(r'^\\lecture\{(.*?)\}\{(.*?)\}\{(.*?)\}$', defline.strip())
-        return [m.group(1), m.group(2), m.group(3)] # throw error if not matched
+        m = re.match(
+            r'^\\lecture\{(.*?)\}\{(.*?)\}\{(.*?)\}$', defline.strip())
+        # throw error if not matched
+        return [m.group(1), m.group(2), m.group(3)]
 
     @staticmethod
-    def make_defline(index: DocIndex, date:str, title:str) -> str:
+    def make_defline(index: DocIndex, date: str, title: str) -> str:
         'The info is (index, date, title)'
         return '\\lecture' + '{' + str(index) + '}' + '{' + date + '}' + '{' + title + '}'
 
@@ -149,7 +152,7 @@ class LinearLectureIndexSystem(DocIndexSystem):
 
 
 class Lecture():
-    def __init__(self, file_path: Path, index_system: DocIndexSystem = LinearLectureIndexSystem()):
+    def __init__(self, file_path: Path, index_system: DocIndexSystem):
         # read index from filenumber
         self.index_system = index_system
         self.index = index_system.DocIndex.from_filename(
@@ -158,18 +161,21 @@ class Lecture():
         with file_path.open('r+') as f:
             for line in f:
                 try:
-                    index_str, date_str, title = index_system.parse_defline(line)
+                    index_str, date_str, title = index_system.parse_defline(
+                        line)
                     break
                 except IndexError:
                     pass
             else:
                 # no match. create title line
 
-                title_line = index_system.make_defline(self.index, datetime.now().strftime(DATE_FORMAT), '')
-                f.seek(0,0) # point to the beginning of the file
+                title_line = index_system.make_defline(
+                    self.index, datetime.now().strftime(DATE_FORMAT), '')
+                f.seek(0, 0)  # point to the beginning of the file
                 f.write(title_line)
 
-                index_str, date_str, title = index_system.parse_defline(title_line)
+                index_str, date_str, title = index_system.parse_defline(
+                    title_line)
 
         date = datetime.strptime(date_str, DATE_FORMAT)
         week = get_week(date)
@@ -190,8 +196,10 @@ class Lecture():
 
 
 class Lectures():
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, index_system: DocIndexSystem = LinearLectureIndexSystem()):
         self.path = path
+        self.index_system = index_system
+
         self.master_file: Path = self.path / 'master.tex'
         self.documents = self.read_files()
         self.all_indices = [doc.index for doc in self.documents]
@@ -202,16 +210,17 @@ class Lectures():
     def __len__(self):
         return len(self.documents)
 
-    def get_from_index(self, index: LinearLectureIndexSystem.DocIndex):
+    def get_from_index(self, index: DocIndexSystem.DocIndex):
         for doc in self:
             if doc.index == index:
                 return doc
 
     def read_files(self):
-        files = [file for file in self.path.iterdir() if LinearLectureIndexSystem.is_filename_valid(file.name)]
-        return sorted((Lecture(f) for f in files), key=lambda l: l.index)
+        files = [file for file in self.path.iterdir(
+        ) if self.index_system.is_filename_valid(file.name)]
+        return sorted((Lecture(f, self.index_system) for f in files), key=lambda l: l.index)
 
-    def parse_doc_spec(self, string: str) -> LinearLectureIndexSystem.DocIndex:
+    def parse_doc_spec(self, string: str) -> DocIndexSystem.DocIndex:
         all_index = self.all_indices
 
         try:
@@ -221,13 +230,13 @@ class Lectures():
                       .replace('prev', str(all_index[-2])))
             try:
                 # may not be in all_index
-                return LinearLectureIndexSystem.DocIndex(string)
+                return self.index_system.DocIndex(string)
             except:
                 raise ValueError(f'Invalid spec: {string}')
         except IndexError:
             raise FileNotFoundError(f'This course is empty')
 
-    def parse_range_string(self, string: str) -> List[LinearLectureIndexSystem.DocIndex]:
+    def parse_range_string(self, string: str) -> List[DocIndexSystem.DocIndex]:
         all_index = self.all_indices
 
         if 'all' in string:
@@ -237,14 +246,13 @@ class Lectures():
                   .replace('current', str(all_index[-1]))
                   .replace('prev', str(all_index[-2])))
 
-        return LinearLectureIndexSystem.match_range(string, all_index)
+        return self.index_system.match_range(string, all_index)
 
-    @staticmethod
-    def parse_master_range(filepath):
+    def parse_master_range(self, filepath) -> Tuple[str, List[DocIndexSystem.DocIndex], str]:
         part = 0
         header: str = ''
         footer: str = ''
-        indices: List[LinearLectureIndexSystem.DocIndex] = []
+        indices: List[DocIndexSystem.DocIndex] = []
         with filepath.open() as f:
             for line in f:
                 # order of if-statements is important here!
@@ -255,7 +263,7 @@ class Lectures():
                     header += line
                 if part == 1:
                     # line = '\input{lec_01.tex}'
-                    indices.append(LinearLectureIndexSystem.DocIndex.from_filename(
+                    indices.append(self.index_system.DocIndex.from_filename(
                         line.split('{')[1].split('}')[0]))
                 if part == 2:
                     footer += line
@@ -264,7 +272,7 @@ class Lectures():
                     part = 1
         return (header, indices, footer)
 
-    def update_docs_in_master(self, indices: List[LinearLectureIndexSystem.DocIndex]):
+    def update_docs_in_master(self, indices: List[DocIndexSystem.DocIndex]):
         'master.tex will only include the lectures in indices'
 
         header, _, footer = self.parse_master_range(self.master_file)
@@ -280,7 +288,7 @@ class Lectures():
         name = name.strip()
 
         # assign a new index to the new document
-        new_doc_index = LinearLectureIndexSystem.new_index(self.all_indices)
+        new_doc_index = self.index_system.new_index(self.all_indices)
         new_doc_path = self.path / new_doc_index.to_filename()
         assert not new_doc_path.exists()
 
@@ -290,7 +298,7 @@ class Lectures():
         # write new document
         new_doc_path.touch()
         new_doc_path.write_text(
-            LinearLectureIndexSystem.make_defline(new_doc_index, date, name))
+            self.index_system.make_defline(new_doc_index, date, name))
 
         # update master.tex
         _, indices, _ = self.parse_master_range(self.master_file)
@@ -299,7 +307,7 @@ class Lectures():
         # reload documents to include the new document
         self.__init__(self.path)
 
-        return Lecture(new_doc_path)
+        return Lecture(new_doc_path, self.index_system)
 
     def clean_latexmk(self):
         subprocess.call(['latexmk', '-c'], cwd=str(self.path))
