@@ -16,29 +16,30 @@ locale.setlocale(locale.LC_ALL, "en_US")
 
 
 class DocIndexSystem():
-    ''' The trivial index system for the documents.
-    There is a 1-1 isomorphism between the indices and the filenames.
-    There is an injection from indices to tex_cmd_name values.'''
+    class DocIndex():
+        def __init__(self, v):
+            pass
 
-    index_pattern = 'lec_*.tex'
+        def __compare__(self, other):
+            pass
 
-    class DocIndex(int):
-        pass
+        def to_filename(self) -> str:
+            raise NotImplementedError()
 
-    @staticmethod
-    def number2filename(n: DocIndex) -> str:
-        return 'lec_{0:02d}.tex'.format(n)
+        @classmethod
+        def from_filename(cls, filename: str):
+            raise NotImplementedError()
 
-    @staticmethod
-    def filename2number(s: str) -> DocIndex:
-        return int(str(s).replace('.tex', '').replace('lec_', ''))
-
-    @staticmethod
-    def tex_cmd_name(n: DocIndex) -> str:
-        return 'lecture'
+    @classmethod
+    def titleline_pattern(cls, index: DocIndex) -> str:
+        raise NotImplementedError()
 
     @staticmethod
-    def match_range(string, all_index) -> List[DocIndex]:
+    def tex_cmd_name(x: DocIndex) -> str:
+        raise NotImplementedError()
+
+    @classmethod
+    def match_range(cls, string, all_index) -> List[DocIndex]:
 
         def filter(ls):
             return [l for l in ls if l in all_index]
@@ -47,47 +48,87 @@ class DocIndexSystem():
             res = []
             for part in string.split(','):
                 if part:
-                    res += DocIndexSystem.match_range(part)
+                    res += cls.match_range(part)
             return res
 
         if '-' in string:
-            nums = string.split('-')
+            num_strs = string.split('-')
             # scan from left to right
-            while nums:
+            while num_strs:
                 try:
-                    if not nums[0]:
-                        nums[0] = 'first'
-                    DocIndexSystem.DocIndex(nums[0])
+                    if not num_strs[0]:
+                        num_strs[0] = 'first'
+                    cls.DocIndex(num_strs[0])
                     break
                 except:
-                    del nums[0]
-            while nums:
+                    del num_strs[0]
+            while num_strs:
                 try:
-                    if not nums[-1]:
-                        nums[-1] = 'last'
-                    DocIndexSystem.DocIndex(nums[-1])
+                    if not num_strs[-1]:
+                        num_strs[-1] = 'last'
+                    cls.DocIndex(num_strs[-1])
                     break
                 except:
-                    del nums[-1]
-            if nums:
-                return filter(list(range(DocIndexSystem.DocIndex(nums[0]), DocIndexSystem.DocIndex(nums[-1]) + 1)))
+                    del num_strs[-1]
+            if num_strs:
+                indices = [cls.DocIndex(n) for n in num_strs]
+                return list(map(cls.DocIndex, filter(cls.range(indices[0], indices[-1]))))
             else:
                 return []
         try:
-            return filter([DocIndexSystem.DocIndex(string)])
+            return filter([cls.DocIndex(string)])
         except:
             return []
 
 
-class Lecture():
-    def __init__(self, file_path):
-        # read index from filenumber
-        self.index = DocIndexSystem.filename2number(file_path.stem)
+class LinearLectureIndexSystem(DocIndexSystem):
+    ''' The trivial index system for the documents.
+    There is a 1-1 isomorphism between the indices and the filenames.
+    There is an injection from indices to tex_cmd_name values.'''
 
-        with file_path.open() as f:
+    index_pattern = 'lec_*.tex'
+
+    class DocIndex(int, DocIndexSystem.DocIndex):
+        def to_filename(self) -> str:
+            return 'lec_{0:02d}.tex'.format(self)
+
+        @classmethod
+        def from_filename(cls, filename: str):
+            return cls(str(filename).replace('.tex', '').replace('lec_', ''))
+
+        def __sub__(self, __x: int):
+            return self.__class__(super().__sub__(__x))
+
+        def __add__(self, __x: int):
+            return self.__class__(super().__add__(__x))
+
+    @classmethod
+    def titleline_pattern(cls, index: DocIndex) -> str:
+        return 'lecture' + r'\{(.*?)\}\{(.*?)\}\{(.*)\}'
+
+    @staticmethod
+    def tex_cmd_name(n: DocIndex) -> str:
+        return '\\lecture' + '{' + str(n) + '}'
+
+    @classmethod
+    def range(cls, start: DocIndex, end: DocIndex) -> List[DocIndex]:
+        return [cls.DocIndex(i) for i in range(start, end + 1)]
+
+    @classmethod
+    def new_index(cls, all_indices: List[DocIndex]):
+        return max(all_indices, default=cls.DocIndex(0)) + 1
+
+
+class Lecture():
+    def __init__(self, file_path: Path):
+        # read index from filenumber
+        self.index = LinearLectureIndexSystem.DocIndex.from_filename(
+            file_path.stem)
+
+        with file_path.open('r+') as f:
             for line in f:
                 doc_match = re.search(
-                    DocIndexSystem.tex_cmd_name(self.index) + r'\{(.*?)\}\{(.*?)\}\{(.*)\}', line)
+                    LinearLectureIndexSystem.titleline_pattern(self.index), line)
                 if doc_match:
                     break
 
@@ -113,8 +154,6 @@ class Lecture():
 
 
 class Lectures():
-    doc_type_name = 'lecture'
-
     def __init__(self, path: Path):
         self.path = path
         self.master_file: Path = self.path / 'master.tex'
@@ -127,17 +166,16 @@ class Lectures():
     def __len__(self):
         return len(self.documents)
 
-    def get_from_index(self, index: DocIndexSystem.DocIndex):
+    def get_from_index(self, index: LinearLectureIndexSystem.DocIndex):
         for doc in self:
-            doc: Lecture
             if doc.index == index:
                 return doc
 
     def read_files(self):
-        files = self.path.glob(DocIndexSystem.index_pattern)
+        files = self.path.glob(LinearLectureIndexSystem.index_pattern)
         return sorted((Lecture(f) for f in files), key=lambda l: l.index)
 
-    def parse_doc_spec(self, string: str) -> DocIndexSystem.DocIndex:
+    def parse_doc_spec(self, string: str) -> LinearLectureIndexSystem.DocIndex:
         all_index = self.all_indices
 
         try:
@@ -147,13 +185,13 @@ class Lectures():
                       .replace('prev', str(all_index[-2])))
             try:
                 # may not be in all_index
-                return DocIndexSystem.DocIndex(string)
+                return LinearLectureIndexSystem.DocIndex(string)
             except:
                 raise ValueError(f'Invalid spec: {string}')
         except IndexError:
             raise FileNotFoundError(f'This course is empty')
 
-    def parse_range_string(self, string: str) -> List[DocIndexSystem.DocIndex]:
+    def parse_range_string(self, string: str) -> List[LinearLectureIndexSystem.DocIndex]:
         all_index = self.all_indices
 
         if 'all' in string:
@@ -163,13 +201,14 @@ class Lectures():
                   .replace('current', str(all_index[-1]))
                   .replace('prev', str(all_index[-2])))
 
-        return DocIndexSystem.match_range(string, all_index)
+        return LinearLectureIndexSystem.match_range(string, all_index)
 
     @staticmethod
-    def get_header_footer(filepath):
+    def parse_master_range(filepath):
         part = 0
-        header = ''
-        footer = ''
+        header: str = ''
+        footer: str = ''
+        indices: List[LinearLectureIndexSystem.DocIndex] = []
         with filepath.open() as f:
             for line in f:
                 # order of if-statements is important here!
@@ -178,49 +217,54 @@ class Lectures():
 
                 if part == 0:
                     header += line
+                if part == 1:
+                    # line = '\input{lec_01.tex}'
+                    indices.append(LinearLectureIndexSystem.DocIndex.from_filename(
+                        line.split('{')[1].split('}')[0]))
                 if part == 2:
                     footer += line
 
                 if 'start lectures' in line:
                     part = 1
-        return (header, footer)
+        return (header, indices, footer)
 
-    def update_docs_in_master(self, r: List[DocIndexSystem.DocIndex]):
-        header, footer = self.get_header_footer(self.master_file)
+    def update_docs_in_master(self, indices: List[LinearLectureIndexSystem.DocIndex]):
+        'master.tex will only include the lectures in indices'
+
+        header, _, footer = self.parse_master_range(self.master_file)
         body = ''.join(
-            ' ' * 4 + r'\input{' + DocIndexSystem.number2filename(index) + '}\n' for index in r)
+            ' ' * 4 + r'\input{' + index.to_filename() + '}\n' for index in indices)
         self.master_file.write_text(header + body + footer)
 
-    def new_doc(self, name):
-        if len(self) != 0:
-            new_doc_index = self.documents[-1].index + 1
-        else:
-            new_doc_index = 1
+    def update_master_from_range_string(self, string: str):
+        indices = self.parse_range_string(string)
+        self.update_docs_in_master(indices)
 
+    def new_doc(self, name):
         name = name.strip()
 
+        # assign a new index to the new document
+        new_doc_index = LinearLectureIndexSystem.new_index(self.all_indices)
         new_doc_path = self.path / \
-            DocIndexSystem.number2filename(new_doc_index)
+            new_doc_index.to_filename()
         assert not new_doc_path.exists()
 
         today = datetime.today()
         date = today.strftime(DATE_FORMAT)
 
+        # write new document
         new_doc_path.touch()
         new_doc_path.write_text(
-            f'\\{self.doc_type_name}{{{new_doc_index}}}{{{date}}}{{{name}}}\n')
+            f'\\{LinearLectureIndexSystem.tex_cmd_name(new_doc_index)}{{{date}}}{{{name}}}\n')
 
-        if new_doc_index == 1:
-            self.update_docs_in_master([1])
-        else:
-            self.update_docs_in_master(
-                [new_doc_index - 1, new_doc_index])
+        # update master.tex
+        _, indices, _ = self.parse_master_range(self.master_file)
+        self.update_docs_in_master(indices + [new_doc_index])
 
-        self.read_files()
+        # reload documents to include the new document
+        self.__init__(self.path)
 
-        l = Lecture(new_doc_path)
-
-        return l
+        return Lecture(new_doc_path)
 
     def clean_latexmk(self):
         subprocess.call(['latexmk', '-c'], cwd=str(self.path))

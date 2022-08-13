@@ -20,8 +20,7 @@ class SetCompileRange(Action):
         )
 
     def execute(self, ):
-        lecture_range = lectures.parse_range_string(self.range)
-        lectures.update_docs_in_master(lecture_range)
+        lectures.update_master_from_range_string(self.range)
         self.logger.info(self.display_name)
         lectures.compile_master()
 
