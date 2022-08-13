@@ -53,15 +53,17 @@ class Course():
     def init_all_course_files(self):
         'Initialize all course files.'
         course_title = self.info["title"]
-        lines = [r'%&pdflatex',
+        lines = [r'%&pdflatex', # this line is important, tells latexmk to output .pdf files instead of .dvi files
                  r'\documentclass[a4paper]{article}',
                  r'\input{../preamble.tex}',
                  fr'\title{{{course_title}}}',
+                 r'\addbibresource{zotero.bib}', # this won't throw an error if the file doesn't exist
                  r'\begin{document}',
                  r'    \maketitle',
                  r'    \tableofcontents',
                  fr'    % start lectures',
                  fr'    % end lectures',
+                 r'    \printbibliography', # this won't throw an error if there are no bibliography entries
                  r'\end{document}'
                  ]
         self.lectures.master_file.touch()
