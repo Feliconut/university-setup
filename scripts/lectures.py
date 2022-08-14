@@ -30,6 +30,10 @@ class DocIndexSystem():
         def from_filename(cls, filename: str):
             raise NotImplementedError()
 
+    @staticmethod
+    def is_filename_valid(filename: str) -> bool:
+        raise NotImplementedError()
+
     @classmethod
     def match_range(cls, string: str, all_index: List[DocIndex]) -> List[DocIndex]:
         raise NotImplementedError()
@@ -214,8 +218,8 @@ class MultiIndexSystem(DocIndexSystem):
 
         @classmethod
         def from_filename(cls, filename: str):
-            return cls(str(filename).replace('.tex', '').split('_')[0],
-                       str(filename).replace('.tex', '').split('_')[1])
+            return cls((str(filename).replace('.tex', '').split('_')[0],
+                       int(str(filename).replace('.tex', '').split('_')[1])))
 
         # syntactic sugar to create new index
 
@@ -225,6 +229,14 @@ class MultiIndexSystem(DocIndexSystem):
         def __add__(self, __x: int):
             return self.__class__((self[0], self[1]+__x))
 
+    @staticmethod
+    def is_filename_valid(filename: str) -> bool:
+        try:
+            assert re.search('^([a-z]+)_(.*).tex$', str(filename)).group(1)
+            assert re.search('^([a-z]+)_(.*).tex$', str(filename)).group(2).isdigit()
+            return True
+        except (AssertionError, AttributeError, IndexError):
+            return False
     @staticmethod
     def parse_defline(defline: str) -> List[str]:
         'Parse the defline and return the info. Throw an exception if the defline is invalid.'
@@ -451,7 +463,7 @@ class Lecture():
 
 
 class Lectures():
-    def __init__(self, path: Path, index_system: DocIndexSystem = LinearLectureIndexSystem()):
+    def __init__(self, path: Path, index_system: DocIndexSystem = MultiIndexSystem()):
         self.path = path
         self.index_system = index_system
 
@@ -503,7 +515,6 @@ class Lectures():
                 if part == 0:
                     header += line
                 if part == 1:
-                    # line = '\input{lec_01.tex}'
                     indices.append(self.index_system.DocIndex.from_filename(
                         line.split('{')[1].split('}')[0]))
                 if part == 2:
