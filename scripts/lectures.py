@@ -30,6 +30,9 @@ class DocIndexSystem():
         def from_filename(cls, filename: str):
             raise NotImplementedError()
 
+        def __format__(self, format_spec):
+            raise NotImplementedError()
+
     @staticmethod
     def is_filename_valid(filename: str) -> bool:
         raise NotImplementedError()
@@ -65,11 +68,11 @@ class LinearLectureIndexSystem(DocIndexSystem):
 
     class DocIndex(int, DocIndexSystem.DocIndex):
         def to_filename(self) -> str:
-            return 'lec_{0:02d}.tex'.format(self)
+            return 'lecture_{0:02d}.tex'.format(self)
 
         @classmethod
         def from_filename(cls, filename: str):
-            return cls(str(filename).replace('.tex', '').replace('lec_', ''))
+            return cls(str(filename).replace('.tex', '').replace('lecture_', ''))
 
         def __sub__(self, __x: int):
             return self.__class__(super().__sub__(__x))
@@ -80,7 +83,7 @@ class LinearLectureIndexSystem(DocIndexSystem):
     @staticmethod
     def is_filename_valid(filename: str) -> bool:
         try:
-            re.search('^lec_(.*).tex$', str(filename)).group(1).isdigit()
+            re.search('^lecture_(.*).tex$', str(filename)).group(1).isdigit()
             return True
         except (AttributeError, IndexError):
             return False
@@ -229,14 +232,19 @@ class MultiIndexSystem(DocIndexSystem):
         def __add__(self, __x: int):
             return self.__class__((self[0], self[1]+__x))
 
+        def __format__(self, format_spec):
+            return '{0} {1:02d}'.format(self[0][:3].capitalize(), self[1])
+
     @staticmethod
     def is_filename_valid(filename: str) -> bool:
         try:
             assert re.search('^([a-z]+)_(.*).tex$', str(filename)).group(1)
-            assert re.search('^([a-z]+)_(.*).tex$', str(filename)).group(2).isdigit()
+            assert re.search('^([a-z]+)_(.*).tex$',
+                             str(filename)).group(2).isdigit()
             return True
         except (AssertionError, AttributeError, IndexError):
             return False
+
     @staticmethod
     def parse_defline(defline: str) -> List[str]:
         'Parse the defline and return the info. Throw an exception if the defline is invalid.'

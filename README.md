@@ -9,9 +9,9 @@ ROOT
 ├── riemann-surfaces
 │   ├── info.yaml
 │   ├── master.tex
-│   ├── lec_01.tex
+│   ├── lecture_01.tex
 │   ├── ...
-│   ├── lec_13.tex
+│   ├── lecture_13.tex
 │   ├── figures
 │   │   ├── analytical-continuation-algebraic-equations.pdf
 │   │   ├── analytical-continuation-algebraic-equations.pdf_tex
@@ -42,9 +42,9 @@ Contents of  `master.tex`:
     \maketitle
     \tableofcontents
     % start lecture
-    \input{lec_01.tex}
+    \input{lecture_01.tex}
     ...
-    \input{lec_12.tex}
+    \input{lecture_12.tex}
     % end lectures
 \end{document}
 ```
@@ -115,7 +115,7 @@ To get it working, follow step 1 and 2 of the [Google Calendar Python Quickstart
 
 #### `lectures.py`
 
-This file defines `Lectures`, the lectures for one course and `Lecture`, a single lecture file `lec_xx.tex`.
+This file defines `Lectures`, the lectures for one course and `Lecture`, a single lecture file `lecture_xx.tex`.
 A `Lecture` has a `title`, `date`, `week`, which get parsed from the LaTeX source code. It also has a reference to its course.
 When calling `.edit()` on a lecture, it opens up lecture in Vim.
 
