@@ -45,7 +45,7 @@ class DocIndexSystem():
         raise NotImplementedError()
 
     @classmethod
-    def range(cls, start: DocIndex, end: DocIndex) -> List[DocIndex]:
+    def range(cls, all_indices: List[DocIndex], start: DocIndex, end: DocIndex) -> List[DocIndex]:
         'Return a list of indices in the range [start, end]'
         raise NotImplementedError()
 
@@ -138,7 +138,7 @@ class LinearLectureIndexSystem(DocIndexSystem):
                     del num_strs[-1]
             if num_strs:
                 indices = [cls.DocIndex(n) for n in num_strs]
-                return list(map(cls.DocIndex, filter(cls.range(indices[0], indices[-1]))))
+                return list(map(cls.DocIndex, filter(cls.range(all_index, indices[0], indices[-1]))))
             else:
                 return []
         try:
@@ -147,12 +147,263 @@ class LinearLectureIndexSystem(DocIndexSystem):
             return []
 
     @classmethod
-    def range(cls, start: DocIndex, end: DocIndex) -> List[DocIndex]:
+    def range(cls, all_indices: List[DocIndex], start: DocIndex, end: DocIndex) -> List[DocIndex]:
         return [cls.DocIndex(i) for i in range(start, end + 1)]
 
     @classmethod
     def new_index(cls, all_indices: List[DocIndex], *args) -> DocIndex:
         return max(all_indices, default=cls.DocIndex(0)) + 1
+
+
+class MultiIndexSystem(DocIndexSystem):
+    ''' This index system allows different types of docs,
+    e.g. lecture, lab, homework, ...
+    Each type of doc have a linear order. All docs together
+    can be ordered by their creation sequence.
+    This index system is backward compatible with the `LinearLectureIndexSystem`.'''
+
+    RESERVED_WORDS = ['current', 'first', 'last', 'prev', 'all',
+                      'latest', 'next', 'previous', 'earliest',
+                      'oldest', 'newest', 'sorted', 'by', 'date',
+                      'title', 'desc', 'asc', 'descending', 'ascending',
+                      'time']
+    # current = last = latest = newest = end
+    # first = earliest = oldest = start
+    # prev = previous
+    # desc = descending
+    # asc = ascending
+
+    # The DocIndex is a tuple of (type, index)
+
+    class DocIndex(tuple, DocIndexSystem.DocIndex):
+        # def __new__(cls, type, index):
+        #     return super().__new__(cls, (type, index))
+
+        def __init__(self, *args):
+            super().__init__(*args)
+            try:
+                assert len(self) == 2
+            except AssertionError:
+                raise ValueError('DocIndex must be a tuple of (type, index)')
+            type_name, num = self
+            type_name: str
+            num: int
+            # name must no be in RESERVED_WORDS
+            try:
+                assert type_name not in MultiIndexSystem.RESERVED_WORDS
+            except AssertionError:
+                raise ValueError(
+                    'DocIndex type name must not be in RESERVED_WORDS')
+            try:
+                assert type_name.isalpha()
+            except AssertionError:
+                raise ValueError('DocIndex type must be an alphabetic word')
+            try:
+                assert isinstance(num, int)
+                assert num >= 1
+            except AssertionError:
+                raise ValueError('DocIndex index must be a positive integer')
+
+        def __compare__(self, other: Tuple[str, int]):
+            if self[0] == other[0]:
+                return self[1] - other[1]
+            return super().__cmp__(other)  # same as __eq__
+
+        def to_filename(self) -> str:
+            return '{0}_{1:02d}.tex'.format(self[0], self[1])
+
+        @classmethod
+        def from_filename(cls, filename: str):
+            return cls(str(filename).replace('.tex', '').split('_')[0],
+                       str(filename).replace('.tex', '').split('_')[1])
+
+        # syntactic sugar to create new index
+
+        def __sub__(self, __x: int):
+            return self.__class__((self[0], self[1]-__x))
+
+        def __add__(self, __x: int):
+            return self.__class__((self[0], self[1]+__x))
+
+    @staticmethod
+    def parse_defline(defline: str) -> List[str]:
+        'Parse the defline and return the info. Throw an exception if the defline is invalid.'
+        m = re.match(
+            r'^\\([a-z]+)\{(.*?)\}\{(.*?)\}\{(.*?)\}$', defline.strip())
+        # throw error if not matched
+        return [str((m.group(1), m.group(2))), m.group(3), m.group(4)]
+
+    @staticmethod
+    def make_defline(index: DocIndex, date: str, title: str) -> str:
+        'The info is (index, date, title)'
+        return '\\{0}'.format(index[0]) + '{' + str(index[1]) + '}' + '{' + date + '}' + '{' + title + '}'
+
+    @classmethod
+    def match_range(cls, string: str, all_index: List[DocIndex]) -> List[DocIndex]:
+        # example prompt:
+        # lecture 1-5, lab 1, homework 2
+        # lecture 1-5, lab 1-2, homework 2-last, current
+        # last lecture, current
+        # all lecture, all lab, sorted by date
+
+        biggest_index_num = max([i[1] for i in all_index])
+
+        # deal with first and last
+        for word in 'current last latest newest end'.split():
+            string.replace(word, str(biggest_index_num))
+        for word in 'first earliest oldest start'.split():
+            string.replace(word, '1')
+        string = (string.replace('first', '1')
+                  .replace('last', str(biggest_index_num)
+                           ))
+
+        # deal with prev
+        # TODO now I deal it like 'last'
+        for word in 'prev previous'.split():
+            string.replace(word, str(biggest_index_num))
+
+        # now all the position strings become numbers
+
+        def parse_simple_range(range_str) -> List[cls.DocIndex]:
+            'Parse a simple range, e.g. "lecture 1 - lab 5"'
+            try:
+                start, end = range_str.strip().split('-')
+                start_type, start_num = start.strip().split(' ')
+                start_num = int(start_num)
+                end_type, end_num = end.strip().split(' ')
+                end_num = int(end_num)
+                start_index = cls.DocIndex((start_type, start_num))
+                end_index = cls.DocIndex((end_type,  end_num))
+                return cls.range(all_index, start_index, end_index)
+            except:
+                raise ValueError('Invalid range: {0}'.format(range_str))
+
+        def parse_complex_range(range_str) -> List[cls.DocIndex]:
+            # example prompt:
+            # lecture 1 - lecture 5
+            # lecture 1 - 5
+            # lecture 2 - lab 3
+            # 2 - lab 3
+            # 2 - 3
+
+            range_str = range_str.strip()
+            # TODO add something here to make it more tolerant to typos
+            try:  # assume it is a simple range
+                return parse_simple_range(range_str)
+            except ValueError:
+                pass
+            try:  # assume it is of the form "1 - 5"
+                # use 'lecture' as a default type
+                start, end = range_str.split('-')
+                start = start.strip()
+                end = end.strip()
+                assert start.isdigit() and end.isdigit()
+                type_str = 'lecture'
+                return parse_simple_range('{0} - {1}'.format(
+                    type_str + ' ' + start,
+                    type_str + ' ' + end))
+            except:
+                pass
+            try:  # assume one side if a index and the other side is a number.
+                # apply the same type to both sides.
+                start, end = range_str.split('-')
+                start = start.strip()
+                end = end.strip()
+                if start.isdigit():
+                    type_str, end = end.strip().split(' ')
+                else:
+                    assert end.isdigit()
+                    type_str, start = start.strip().split(' ')
+                # now start and end are both integers
+                return parse_simple_range('{0} - {1}'.format(
+                    type_str + ' ' + start,
+                    type_str + ' ' + end))
+            except:
+                pass
+            raise ValueError('Invalid range: {0}'.format(range_str))
+
+        def parse_sorting_info(sorting_sentence: str):
+            'Parse the sorting info. Return the sorter function that can be used to sort the list.'
+            # example prompt:
+            # sorted by date
+            # sorted by date desc
+            # sorted by title asc
+
+            reverse = False
+
+            sorting_sentence = (sorting_sentence
+                                .replace('sorted by', '')
+                                .replace('sorted', '')
+                                .replace('by', '')
+                                .replace('asc', '')  # ascending is a default
+                                .strip())
+            if 'desc' in sorting_sentence:
+                reverse = True
+                sorting_sentence = sorting_sentence.replace('desc', '').strip()
+
+            # now it must be alphabetical
+            if not sorting_sentence.isalpha():
+                # return trivial sorter
+                raise ValueError(
+                    'Invalid sorting info: {0}'.format(sorting_sentence))
+
+            attr_name = sorting_sentence.lower()
+
+            def sort(documents: Lecture, reverse: bool = False) -> List[Lecture]:
+                'Sort the list of documents by the date.'
+                try:
+                    return sorted(documents, key=lambda x: getattr(x, attr_name), reverse=reverse)
+                except AttributeError:
+                    return documents
+            return sort
+
+        parsed_range = []
+        def sorter(x): return x
+        for sentence in string.split(','):
+            sentence = sentence.strip()
+            # try to parse it as a sorting info
+            try:
+                sorter = parse_sorting_info(sentence)
+                continue
+            except ValueError:
+                pass
+            # try to parse it as a range
+            try:
+                parsed_range.extend(parse_complex_range(sentence))
+                continue
+            except ValueError:
+                pass
+            # no nothing with this command
+            # warn the user
+            print('Warning: invalid command: {0}'.format(sentence))
+
+        return parsed_range  # TODO sorter feature
+
+    @classmethod
+    def range(cls, all_indices: List[DocIndex], start: DocIndex, end: DocIndex) -> List[DocIndex]:
+        'Return a list of indices in the range [start, end]'
+        # start and end are of the same type
+        if start[0] == end[0]:
+            return [i for i in all_indices if i[0] == start[0] and i[1] >= start[1] and i[1] <= end[1]]
+        else:
+            # the items located between start and end in all_indices
+            try:
+                return all_indices[all_indices.index(start):all_indices.index(end)+1]
+            except IndexError:
+                raise ValueError('start and end must be in all_index')
+
+    @classmethod
+    def new_index(cls, all_indices: List[DocIndex], type_str=None) -> DocIndex:
+        if not type_str:
+            if not all_indices:
+                type_str = 'lecture'
+            else:
+                type_str = all_indices[-1][0]
+        matched_indices = [i for i in all_indices if i[0] == type_str]
+        if not matched_indices:
+            return cls.DocIndex((type_str, 1))
+        else:
+            return matched_indices[-1] + 1
 
 
 class Lecture():
