@@ -4,7 +4,7 @@ from courses import courses
 
 lectures = courses.current.lectures
 
-commands = ['last', 'prev-last', 'all', 'prev']
+commands = ['last lecture', 'lecture prev-last', 'lecture all', 'lecture prev']
 cmd_display = ['Current lecture', 'Last two lectures',
                'All lectures', 'Previous lectures']
 
@@ -40,7 +40,7 @@ class ChooseCompileRange(Service):
         return [SetCompileRange(cmd, disp) for cmd, disp in zip(commands, cmd_display)]
 
     def make_custom_action(self, args):
-        range_str = ','.join(args)
+        range_str = ' '.join(args)
         try:
             lectures.parse_range_string(range_str)
             return SetCompileRange(range_str, 'User entered range: ' + range_str)

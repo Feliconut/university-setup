@@ -266,37 +266,47 @@ class MultiIndexSystem(DocIndexSystem):
         # last lecture, current
         # all lecture, all lab, sorted by date
 
-        biggest_index_num = max([i[1] for i in all_index])
+        def position_num(position_string: str, type_str: str) -> int:
+            ''' resolve the position string to a list of DocIndex '''
 
-        # deal with first and last
-        for word in 'current last latest newest end'.split():
-            string.replace(word, str(biggest_index_num))
-        for word in 'first earliest oldest start'.split():
-            string.replace(word, '1')
-        string = (string.replace('first', '1')
-                  .replace('last', str(biggest_index_num)
-                           ))
+            all_num = [i[1]
+                       for i in all_index if i[0] == type_str or not type_str]
+            position_string = position_string.strip()
+            if position_string in 'current last latest newest end'.split():
+                return all_num[-1]
+            elif position_string in 'first earliest oldest start'.split():
+                return all_num[0]
+            elif position_string in 'prev previous'.split():
+                try:
+                    return all_num[-2]
+                except IndexError:
+                    return all_num[-1]
+            elif position_string.isdigit():
+                # if int(position_string) in all_num:
+                return int(position_string)
+            return False
 
-        # deal with prev
-        # TODO now I deal it like 'last'
-        for word in 'prev previous'.split():
-            string.replace(word, str(biggest_index_num))
+        def parse_clause(spec_str) -> cls.DocIndex:
+            # replace any number of space with a single space
+            spec_str = re.sub(r'\s+', ' ', spec_str)
 
-        # now all the position strings become numbers
-
-        def parse_simple_range(range_str) -> List[cls.DocIndex]:
-            'Parse a simple range, e.g. "lecture 1 - lab 5"'
             try:
-                start, end = range_str.strip().split('-')
-                start_type, start_num = start.strip().split(' ')
-                start_num = int(start_num)
-                end_type, end_num = end.strip().split(' ')
-                end_num = int(end_num)
+                start = spec_str.strip()
+                start_type, start_pos = start.split(' ')  # reverse order
+                start_num = position_num(start_pos, start_type)
                 start_index = cls.DocIndex((start_type, start_num))
-                end_index = cls.DocIndex((end_type,  end_num))
-                return cls.range(all_index, start_index, end_index)
+                return start_index
             except:
-                raise ValueError('Invalid range: {0}'.format(range_str))
+                pass
+            try:
+                start = spec_str.strip()
+                start_pos, start_type = start.split(' ')  # reverse order
+                start_num = position_num(start_pos, start_type)
+                start_index = cls.DocIndex((start_type, start_num))
+                return start_index
+            except:
+                pass
+            raise ValueError('Invalid spec: {0}'.format(spec_str))
 
         def parse_complex_range(range_str) -> List[cls.DocIndex]:
             # example prompt:
@@ -308,36 +318,44 @@ class MultiIndexSystem(DocIndexSystem):
 
             range_str = range_str.strip()
             # TODO add something here to make it more tolerant to typos
-            try:  # assume it is a simple range
-                return parse_simple_range(range_str)
-            except ValueError:
+            try:
+                start, end = range_str.strip().split('-')
+                start_index = parse_clause(start)
+                end_index = parse_clause(end)
+                return cls.range(all_index, start_index, end_index)
+            except:
                 pass
             try:  # assume it is of the form "1 - 5"
                 # use 'lecture' as a default type
                 start, end = range_str.split('-')
                 start = start.strip()
                 end = end.strip()
-                assert start.isdigit() and end.isdigit()
                 type_str = 'lecture'
-                return parse_simple_range('{0} - {1}'.format(
-                    type_str + ' ' + start,
-                    type_str + ' ' + end))
+                return cls.range(all_index,
+                                 parse_clause(type_str + ' ' + start),
+                                 parse_clause(type_str + ' ' + end))
+
             except:
                 pass
             try:  # assume one side if a index and the other side is a number.
                 # apply the same type to both sides.
                 start, end = range_str.split('-')
-                start = start.strip()
-                end = end.strip()
-                if start.isdigit():
-                    type_str, end = end.strip().split(' ')
-                else:
-                    assert end.isdigit()
-                    type_str, start = start.strip().split(' ')
-                # now start and end are both integers
-                return parse_simple_range('{0} - {1}'.format(
-                    type_str + ' ' + start,
-                    type_str + ' ' + end))
+                start_index = end_index = None
+                try:
+                    start_index = parse_clause(start)
+                except:
+                    pass
+                try:
+                    end_index = parse_clause(end)
+                except:
+                    pass
+                if start_index:
+                    assert position_num(end, start_index[0])
+                    return cls.range(all_index, start_index,
+                                     parse_clause(start_index[0] + ' ' + str(position_num(end, start_index[0]))))
+                if end_index:
+                    assert position_num(start, end_index[0])
+                    return cls.range(all_index, parse_clause(end_index[0] + ' ' + str(position_num(start, end_index[0]))), end_index)
             except:
                 pass
             raise ValueError('Invalid range: {0}'.format(range_str))
@@ -348,12 +366,14 @@ class MultiIndexSystem(DocIndexSystem):
             # sorted by date
             # sorted by date desc
             # sorted by title asc
+            assert 'sort' in sorting_sentence.lower()
 
             reverse = False
 
             sorting_sentence = (sorting_sentence
                                 .replace('sorted by', '')
                                 .replace('sorted', '')
+                                .replace('sort', '')
                                 .replace('by', '')
                                 .replace('asc', '')  # ascending is a default
                                 .strip())
@@ -385,7 +405,24 @@ class MultiIndexSystem(DocIndexSystem):
             try:
                 sorter = parse_sorting_info(sentence)
                 continue
-            except ValueError:
+            except:
+                pass
+            # try to parse it as an 'all' sentence. ex: all lecture, all lab, all homework
+            try:
+                assert 'all' in sentence
+                sentence = sentence.replace('all', '').strip()
+                type_str = sentence.lower()
+                assert type_str.isalpha() or not type_str
+                parsed_range.extend(
+                    [i for i in all_index if i[0] == type_str or not type_str])
+                continue
+            except:
+                pass
+            # try to parse it as a clause
+            try:
+                parsed_range.append(parse_clause(sentence))
+                continue
+            except:
                 pass
             # try to parse it as a range
             try:
@@ -393,7 +430,7 @@ class MultiIndexSystem(DocIndexSystem):
                 continue
             except ValueError:
                 pass
-            # no nothing with this command
+            # do nothing with this command
             # warn the user
             print('Warning: invalid command: {0}'.format(sentence))
 
@@ -498,7 +535,7 @@ class Lectures():
     def parse_doc_spec(self, string: str) -> DocIndexSystem.DocIndex:
         all_index = self.all_indices
         try:
-            return self.index_system.match_range(all_index, string+'-'+string)[0]
+            return self.index_system.match_range(string, all_index)[0]
         except IndexError:
             raise FileNotFoundError(
                 f'No file found for {string}. The course may be empty.')
@@ -544,11 +581,12 @@ class Lectures():
         indices = self.parse_range_string(string)
         self.update_docs_in_master(indices)
 
-    def new_doc(self, name):
+    def new_doc(self, name, type_name='lecutre'):
         name = name.strip()
 
         # assign a new index to the new document
-        new_doc_index = self.index_system.new_index(self.all_indices)
+        new_doc_index = self.index_system.new_index(
+            self.all_indices, type_name)
         new_doc_path = self.path / new_doc_index.to_filename()
         assert not new_doc_path.exists()
 

@@ -81,7 +81,7 @@ print(MultiIndexSystem.match_range('   lecture 1-7   ', current_indices, ))
 
 print(MultiIndexSystem.match_range('  1- lab 7   ', current_indices, ))
 
-print(MultiIndexSystem.match_range('  lecture 2 - lab 7   ', current_indices, ))
+print('should fail', MultiIndexSystem.match_range('  lecture 2 - lab 7   ', current_indices, ))
 # this case should fail.
 
 print(MultiIndexSystem.match_range('  lecture 2 - lab 2   ', current_indices, ))
@@ -95,3 +95,44 @@ print(MultiIndexSystem.match_range('lecture 1-3, lecture 2-lab 2, lecture 3-4', 
 # test compounded sentences with 'sorted by'
 
 print(MultiIndexSystem.match_range('lecture 1-2, sorted by date, lecture 2-3', current_indices, ))
+
+# test simple sentences with 'first'
+
+print(MultiIndexSystem.match_range('lecture first - lecture last', current_indices, ))
+print(MultiIndexSystem.match_range('lecture first - lecture prev', current_indices, ))
+print(MultiIndexSystem.match_range('lecture 2 - lecture last', current_indices, ))
+print(MultiIndexSystem.match_range('lecture first - lecture 3', current_indices, ))
+print(MultiIndexSystem.match_range('lecture first - lab last', current_indices, ))
+print(MultiIndexSystem.match_range('lab first - lecture last', current_indices, ))
+print(MultiIndexSystem.match_range('lab first - lecture 4', current_indices, ))
+print('should fail', MultiIndexSystem.match_range('lab first - lecture 3', current_indices, ))
+
+# test complex range with 'first'
+
+print(MultiIndexSystem.match_range('lecture first - last', current_indices, ))
+print(MultiIndexSystem.match_range('lecture first - prev', current_indices, ))
+print(MultiIndexSystem.match_range(' 2 - lecture last', current_indices, ))
+print(MultiIndexSystem.match_range(' first - lecture 3', current_indices, ))
+print(MultiIndexSystem.match_range('lab first - last', current_indices, ))
+print(MultiIndexSystem.match_range('lab first - lecture 4', current_indices, ))
+print('should fail', MultiIndexSystem.match_range('lab first - lecture', current_indices, ))
+
+# test complex range with 'all'
+
+print(MultiIndexSystem.match_range('lecture all', current_indices, ))
+print(MultiIndexSystem.match_range('all lecture', current_indices, ))
+print('should fail',MultiIndexSystem.match_range(' all first lecture', current_indices, ))
+print(MultiIndexSystem.match_range(' all', current_indices, ))
+
+# test reversing arguments in each clause
+
+print(MultiIndexSystem.match_range('first lecture - last', current_indices, ))
+print(MultiIndexSystem.match_range('lecture first - prev', current_indices, ))
+print(MultiIndexSystem.match_range(' 2 lecture - lecture last', current_indices, ))
+print(MultiIndexSystem.match_range(' first -  3   lecture ', current_indices, ))
+print(MultiIndexSystem.match_range(' first lab- last', current_indices, ))
+print(MultiIndexSystem.match_range(' first    lab- lecture  4 ', current_indices, ))
+
+# test entering single clause
+
+print(MultiIndexSystem.match_range('first lecture , lab last', current_indices, ))
