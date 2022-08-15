@@ -10,12 +10,12 @@ lectures = current_course.lectures
 
 
 class OpenLecture(Action):
-    'Edit a lecture using vimtex. This action opens a MacVim window with the lecture file.'
+    'Edit a document using vimtex. This action opens a MacVim window with the .tex file.'
 
     def __init__(self, lecture: Lecture, course: Course):
         self.lecture = lecture
         super().__init__(
-            name='Open lecture {}'.format(lecture.file_path),
+            name='Open document {}'.format(lecture.file_path),
             display_name="Open {number: >2}. {title: <{fill}} {date}  ({week})".format(
                 fill=MAX_LEN,
                 number=lecture.index,
@@ -27,16 +27,17 @@ class OpenLecture(Action):
         )
 
     def execute(self, ):
-        self.logger.info('Opening lecture {}'.format(self.lecture.file_path))
+        self.logger.info('Opening document {}'.format(self.lecture.file_path))
         self.lecture.edit()
 
 
 class CreateLecture(Action):
-    '''Create a new lecture in the current course. The 
-    lecture will be opened in vimtex.'''
+    '''Create a new document in the current course. The 
+    document will be opened in vimtex.'''
 
-    def __init__(self, name=''):
+    def __init__(self, name='', type_name='lecture'):
         self.lecture_name = name
+        self.type_name = type_name
         super().__init__(
             name='new lecture',
             display_name='New Lecture',
@@ -46,7 +47,8 @@ class CreateLecture(Action):
         self.logger.info(
             'Creating new lecture in {}'.format(current_course.name))
         try:
-            new_lecture = lectures.new_doc(name=self.lecture_name)
+            new_lecture = lectures.new_doc(
+                name=self.lecture_name, type_name=self.type_name)
             OpenLecture(new_lecture, current_course).execute()
         except:
             self.logger.exception(
@@ -54,30 +56,33 @@ class CreateLecture(Action):
 
 
 class CreateLectureService(Service):
-    '''Create a new lecture in the current course. The lecture will be opened in vimtex. The lecture name is given as an argument. If no argument is given, the name will be empty.'''
+    '''Create a new document in the current course. The document will be opened in vimtex. The document name and type is given as an argument. If no argument is given, the name will be empty, and type will default to `lecture`.'''
 
-    def __init__(self):
+    def __init__(self, type_name='lecture'):
         super().__init__(name='create lecture')
-        self.hint_word = ['New', 'Lecture']
+        self.hint_word = ['New', type_name.capitalize()]
+        self.type_name = type_name
 
     def make_custom_action(self, args):
-        return CreateLecture(name=' '.join(args))
+        return CreateLecture(name=' '.join(args), type_name=self.type_name)
 
 
 class ChooseLecture(Service):
-    '''Choose a lecture from the current course. The lecture will be opened in vimtex. The lecture number is given as an argument. If no argument is given, nothing will happen.'''
+    '''Choose a document from the current course. The document will be opened in vimtex. The index (eg. `Lecture 1`) is given as an argument. If no argument is given, nothing will happen.'''
 
-    def __init__(self):
+    def __init__(self, type_name='lecture',):
         super().__init__(
-            name='choose lectures',)
-        self.hint_word = ['Open', 'Lecture']
+            name='choose documents')
+        self.type_name = type_name
+        self.hint_word = ['Open'] + [type_name.capitalize()]
 
     def suggested_actions(self):
-        return [OpenLecture(lecture, current_course) for lecture in lectures]
+        return [OpenLecture(lecture, current_course) for lecture in lectures if lecture.index[0] == self.type_name]
 
     def make_custom_action(self, args):
         if args:
-            lecture_number = lectures.parse_range_string(' '.join(args)[0])
+            lecture_number = lectures.parse_range_string(
+                self.type_name + ' ' + ' '.join(args))[0]
             if lecture_number in lectures.all_indices:
                 try:
                     return OpenLecture(lectures.get_from_index(lecture_number), current_course)
@@ -85,5 +90,24 @@ class ChooseLecture(Service):
                     pass
 
 
+class CreateDocumentTypeService(Service):
+    '''Create a new document type. The document type is given as an argument. If no argument is given, nothing will happen.'''
+
+    def __init__(self):
+        super().__init__(name='create document type')
+        self.hint_word = ['New', 'Document', 'Type']
+
+    def make_custom_action(self, args):
+        # check that the document type does not already exist
+        if args:
+            type_name = args[0]
+            if type_name in lectures.all_types:
+                self.logger.error(
+                    'Document type {} already exists'.format(type_name))
+                return None
+            return CreateLecture(name=' '.join(args), type_name=args[0].lower())
+
+
 if __name__ == '__main__':
-    ChooseLecture().execute()
+    # ChooseLecture().execute()
+    CreateDocumentTypeService().execute()

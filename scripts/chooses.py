@@ -14,21 +14,27 @@ services: List[Union[Service, MenuItem]] = []
 if exists_course_current:
     from choose_lectures_view import ChooseCompileRange
     from choose_courses import ChooseCurrentCourse, DisplayCurrentCourse
-    from choose_lectures import ChooseLecture, CreateLectureService
+    from choose_lectures import ChooseLecture, CreateLectureService, CreateDocumentTypeService
     services += [ChooseCompileRange(),
-                 DisplayCurrentCourse(),
-                 ChooseLecture(),
-                 CreateLectureService(),
-                 ChooseCurrentCourse(),
-                 ]
+                 DisplayCurrentCourse(), ]
+
+    append = []
+    for type_name in courses.current.lectures.all_types:
+        services += [ChooseLecture(type_name), ]
+        append += [CreateLectureService(type_name)]
+    services += append
+    services += [CreateDocumentTypeService(), ]
+    services += [
+        ChooseCurrentCourse(),
+    ]
 
 
 if exists_semester_current:
     from choose_view_pdf import ChooseCoursePDF
     from choose_courses import CreateCourseService, ChooseCurrentSemester
     services += [CreateCourseService(),
-                 ChooseCoursePDF(), 
-                 ChooseCurrentSemester(),]
+                 ChooseCoursePDF(),
+                 ChooseCurrentSemester(), ]
 
 
 class AllChoicesService(Service):

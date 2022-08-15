@@ -4,9 +4,12 @@ from courses import courses
 
 lectures = courses.current.lectures
 
-commands = ['last lecture', 'lecture prev-last', 'lecture all', 'lecture prev']
-cmd_display = ['Current lecture', 'Last two lectures',
-               'All lectures', 'Previous lectures']
+commands = [('last lecture', 'Current lecture'),
+            ('prev-last', 'Last two documents'),
+            ('lecture all', 'All lectures'),
+            # ('lecture prev','Previous lecture')
+            ('all', 'All documents'),
+            ]
 
 
 class SetCompileRange(Action):
@@ -37,7 +40,7 @@ class ChooseCompileRange(Service):
         self.hint_word = ['Include']
 
     def suggested_actions(self):
-        return [SetCompileRange(cmd, disp) for cmd, disp in zip(commands, cmd_display)]
+        return [SetCompileRange(cmd, disp) for cmd, disp in commands]
 
     def make_custom_action(self, args):
         range_str = ' '.join(args)

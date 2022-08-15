@@ -560,7 +560,8 @@ class Lectures():
                     part = 1
         return (header, indices, footer)
 
-    def get_all_doc_types(self) -> List[str]:
+    @property
+    def all_types(self) -> List[str]:
         return sorted(set(doc.index[0] for doc in self))
 
     def update_docs_in_master(self, indices: List[DocIndexSystem.DocIndex]):
@@ -577,6 +578,7 @@ class Lectures():
 
     def new_doc(self, name, type_name='lecutre'):
         name = name.strip()
+        assert type_name.isalpha()
 
         # assign a new index to the new document
         new_doc_index = self.index_system.new_index(
