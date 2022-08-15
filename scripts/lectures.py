@@ -398,6 +398,7 @@ class MultiIndexSystem(DocIndexSystem):
             return sort
 
         parsed_range = []
+        string = string.strip().lower()
         def sorter(x): return x
         for sentence in string.split(','):
             sentence = sentence.strip()
