@@ -467,7 +467,7 @@ class Lecture():
     def __init__(self, file_path: Path, index_system: DocIndexSystem):
         # read index from filenumber
         self.index_system = index_system
-        self.index = index_system.DocIndex.from_filename(
+        self.index: index_system.DocIndex = index_system.DocIndex.from_filename(
             file_path.stem)
 
         with file_path.open('r+') as f:
@@ -527,20 +527,10 @@ class Lectures():
             if doc.index == index:
                 return doc
 
-    def read_files(self):
+    def read_files(self) -> List[Lecture]:
         files = [file for file in self.path.iterdir(
         ) if self.index_system.is_filename_valid(file.name)]
         return sorted((Lecture(f, self.index_system) for f in files), key=lambda l: l.index)
-
-    def parse_doc_spec(self, string: str) -> DocIndexSystem.DocIndex:
-        all_index = self.all_indices
-        try:
-            return self.index_system.match_range(string, all_index)[0]
-        except IndexError:
-            raise FileNotFoundError(
-                f'No file found for {string}. The course may be empty.')
-        except:
-            raise ValueError(f'Invalid index {string}')
 
     def parse_range_string(self, string: str) -> List[DocIndexSystem.DocIndex]:
         all_index = self.all_indices
@@ -568,6 +558,9 @@ class Lectures():
                 if 'start lectures' in line:
                     part = 1
         return (header, indices, footer)
+
+    def get_all_doc_types(self) -> List[str]:
+        return sorted(set(doc.index[0] for doc in self))
 
     def update_docs_in_master(self, indices: List[DocIndexSystem.DocIndex]):
         'master.tex will only include the lectures in indices'

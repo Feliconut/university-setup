@@ -77,7 +77,7 @@ class ChooseLecture(Service):
 
     def make_custom_action(self, args):
         if args:
-            lecture_number = lectures.parse_doc_spec(args[0])
+            lecture_number = lectures.parse_range_string(' '.join(args)[0])
             if lecture_number in lectures.all_indices:
                 try:
                     return OpenLecture(lectures.get_from_index(lecture_number), current_course)
