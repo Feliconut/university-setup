@@ -1,8 +1,10 @@
 #!/usr/local/bin/python3
 
+from pathlib import Path
 from typing import List, Union
 from action import Action, MenuItem, Service
 from courses import courses, semesters
+from show_picture import ShowPictureAction
 
 # register all services and options
 
@@ -35,6 +37,10 @@ if exists_semester_current:
     services += [CreateCourseService(),
                  ChooseCoursePDF(),
                  ChooseCurrentSemester(), ]
+
+from choose_logseq import ConvertVimtexAction
+services += [ConvertVimtexAction(), 
+             ShowPictureAction(Path(__file__).parent / 'assets/inkscape_shortcut.png'), ]
 
 
 class AllChoicesService(Service):
