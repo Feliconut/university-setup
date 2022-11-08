@@ -30,6 +30,26 @@ class ChooseCoursePDF(Service):
     def suggested_actions(self):
         return [OpenCoursePDF(course) for course in courses]
 
+class ExportCurrentCoursePDF(Action):
+    'Export the compiled PDF of this course.'
+
+    def __init__(self):
+        super().__init__(
+            name='Export course PDF',
+            display_name='Export course PDF',
+        )
+    
+
+    def execute(self, ):
+        self.logger.info('Exporting course PDF')
+        pdf_path = str(courses.current.lectures.path / 'master.pdf')
+        # copy the file to desktop of current user
+        from shutil import copyfile
+        from pathlib import Path
+        home = str(Path.home())
+        copyfile(pdf_path, home + '/Desktop/' + courses.current.name + '.pdf')
+
+
 
 if __name__ == '__main__':
-    ChooseCoursePDF().execute()
+    ExportCurrentCoursePDF().execute()

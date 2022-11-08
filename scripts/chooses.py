@@ -32,11 +32,13 @@ if exists_course_current:
 
 
 if exists_semester_current:
-    from choose_view_pdf import ChooseCoursePDF
+    from choose_view_pdf import ChooseCoursePDF, ExportCurrentCoursePDF
     from choose_courses import CreateCourseService, ChooseCurrentSemester
-    services += [CreateCourseService(),
-                 ChooseCoursePDF(),
-                 ChooseCurrentSemester(), ]
+    services += [
+        CreateCourseService(),
+        ChooseCoursePDF(),
+        ExportCurrentCoursePDF(),
+        ChooseCurrentSemester(), ]
 
 from choose_logseq import ConvertVimtexAction
 services += [ConvertVimtexAction(), 
