@@ -1,5 +1,7 @@
 # Managing LaTeX lecture notes
 
+NOTE: This README is obsolete. It does not reflect the changes made to the original version by Castel.
+
 This repository complements my [third blog post about my note taking setup](https://castel.dev/post/lecture-notes-3).
 
 #### File structure
