@@ -21,7 +21,12 @@ class Choose():
 
 
         args = ['choose', '-m']
-        args += ['-f','Cascadia Code PL']
+        args += ['-f','PublicoText-SemiboldItalic']
+        args += ['-s','30']
+        # args += ['-f','Cascadia Code PL']
+        args += ['-b', '4d9b41']
+        args += ['-w', '60']
+        args += ['-c', '708ffb']
         # if fuzzy:
         #     args += ['-matching', 'fuzzy']
         # args += ['-dmenu', '-p', prompt, '-format', 's', '-i']
