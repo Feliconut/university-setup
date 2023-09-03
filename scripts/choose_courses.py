@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 from action import Action, MenuItem, Service
-from courses import Course, Semester, Semesters, courses, semesters
+from courses import Course, Semester, courses, semesters
 from utils import MAX_LEN
 
 
@@ -45,10 +45,10 @@ class DisplayCurrentCourse(MenuItem):
     def __init__(self):
         super().__init__(
             name='display current course',
-            display_name='Now on: {name:<{fill}}    ({semester})'.format(
-                name=courses.current.name,
-                fill=MAX_LEN,
-                semester=courses.current.path.resolve().parent.stem),
+            display_name='Now on {name:<{fill}} ({semester})'.format(
+                name='**'+courses.current.name+'**',
+                fill=MAX_LEN*2,
+                semester=semesters.current.name),
         )
 
 

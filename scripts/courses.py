@@ -173,7 +173,7 @@ class Courses():
 class Semester():
     def __init__(self, path: Path):
         self.path = path
-        self.name = path.stem
+        self.name = path.parent.stem + '/' + path.stem
         self._courses = []  # lazy loading
 
     def __iter__(self):
@@ -235,13 +235,12 @@ class Semesters():
         Read all semesters in ROOT
         """
         semester_directories = [x for x in recursive_iterdir(
-            ROOT) if Semester.is_semester(x)]
+            ROOT) if not x.is_symlink() and Semester.is_semester(x)]
         _semesters = [Semester(path) for path in semester_directories]
         return sorted(_semesters, key=lambda s: s.name)
 
     def __init__(self):
         self._semesters = []  # lazy loading
-        self.read_current_semester()  # ensures that the current semester is set correctly
 
     def __iter__(self):
         if self._semesters == []:
