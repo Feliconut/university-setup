@@ -10,11 +10,11 @@ def unbeautify(string):
     return string.replace(' ', '-').lower()
 
 
-MAX_LEN = 38
+MAX_LEN = 50
 
 
 def generate_short_title(title):
-    short_title = title or 'Untitled'
+    short_title = title or '...'
     if len(title) >= MAX_LEN:
         short_title = title[:MAX_LEN - len(' ... ')] + ' ... '
     short_title = short_title.replace('$', '')

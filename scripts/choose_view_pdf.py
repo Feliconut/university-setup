@@ -1,5 +1,6 @@
 from action import Action, Service
 from courses import Course, courses
+from utils import MAX_LEN
 
 
 
@@ -11,7 +12,7 @@ class OpenCoursePDF(Action):
         self.course = course
         super().__init__(
             name='Open course PDF',
-            display_name='Open {} PDF'.format(course.name),
+            display_name=f'Open PDF: {" "*MAX_LEN}{course.name}',
         )
 
     def execute(self, ):
@@ -52,4 +53,4 @@ class ExportCurrentCoursePDF(Action):
 
 
 if __name__ == '__main__':
-    ExportCurrentCoursePDF().execute()
+    OpenCoursePDF(courses.current).execute()

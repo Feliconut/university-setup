@@ -16,13 +16,14 @@ class OpenLecture(Action):
         self.lecture = lecture
         super().__init__(
             name='Open document {}'.format(lecture.file_path),
-            display_name="Open {number: >2}. {title: <{fill}} {date}  ({week})".format(
+            display_name="Open {number}.           {title: <{fill}} {space} {date:<{fill}}".format(
                 fill=MAX_LEN,
                 number=lecture.index,
                 title=generate_short_title(lecture.title),
                 date=lecture.date.strftime('%a %d %b'),
                 week=lecture.week,
-                course_short=course.info['short']
+                course_short=course.info['short'],
+                space = ' '*int((MAX_LEN - len(generate_short_title(lecture.title)))*1.35)
             )
         )
 

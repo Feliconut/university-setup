@@ -14,7 +14,7 @@ class SetCurrentCourse(Action):
             name='set current course to {}'.format(course.name),
             display_name='Switch to {name:<{fill}} ({semester})'.format(
                 name=course.name,
-                fill=MAX_LEN,
+                fill=MAX_LEN*2,
                 semester=course.semester),
         )
 
