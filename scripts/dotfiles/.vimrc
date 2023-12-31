@@ -104,7 +104,10 @@ nnoremap <C-f> : silent exec '!inkscape-figures edit "'.b:vimtex.root.'/figures/
 silent !find -L ~/univ/current_semester -type d | grep "figures$" > '/Users/xiaoyu/Library/Application Support/inkscape-figures/roots'
 silent !inkscape-figures watch
 
-"""Quiver
+""""""""""""""""""
+" Quiver
+""""""""""""""""""
+
 function! ReplaceQuiverDiagram()
     " Save current cursor position
     let save_cursor = getpos(".")
@@ -116,12 +119,12 @@ function! ReplaceQuiverDiagram()
     endif
 
     " Search for the URL start and diagram end
-    let start = search('%\s\S\+\/\#q=', 'b')
+    let start = search('%\shttps\S\+\/\#q=', 'b')
     let end = search('\\end{tikzcd}', '')
     if save_cursor[1] >= start && save_cursor[1] <= end
     	" Extract the URL
     	let url_line = getline(start)
-    	let matched_parts = matchlist(url_line, '\s\(\S\+\)\/\#q=\(.\+\)$') 
+    	let matched_parts = matchlist(url_line, '\s\(https\S\+\)\/\#q=\(.\+\)$') 
 
 	let first_part =  matched_parts[1]
 	let second_part =  matched_parts[2]
@@ -145,7 +148,17 @@ autocmd FileType tex nnoremap <buffer> <C-x><C-q> :call ReplaceQuiverDiagram()<C
 " Quiver text objects
 autocmd FileType tex xnoremap aq :<C-u>call QuiverTextObject()<CR>
 autocmd FileType tex omap aq :normal vaq<CR>
-
+autocmd FileType tex noremap tq :call search('%\s\S\+\/\#q=', '')<CR>
+autocmd FileType tex noremap Fq :call search('%\s\S\+\/\#q=', 'b')<CR>
+" To find the endpoint of the quiver, need to first find the start point. 
+" Cannother directly search tikzcd because it is not unique
+function! SearchTwoPatterns(pattern1, backward1, pattern2, backward2)
+    call search(a:pattern1, a:backward1)
+    call search(a:pattern2, a:backward2)
+    normal! j^
+endfunction
+autocmd FileType tex noremap Tq :call SearchTwoPatterns('%\shttps\S\+\/\#q=', 'b', '\\end{tikzcd}', '')<CR>
+autocmd FileType tex noremap fq :call SearchTwoPatterns('%\shttps\S\+\/\#q=', '', '\\end{tikzcd}', '')<CR>
 function! QuiverTextObject()
     let save_cursor = getpos(".")
 
@@ -164,5 +177,4 @@ function! QuiverTextObject()
     endif
 endfunction
 
-" f Q
 

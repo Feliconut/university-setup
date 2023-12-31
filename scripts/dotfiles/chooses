@@ -1,1 +1,2 @@
+# This file is called by karabiner at keystrokes.
 /opt/homebrew/bin/python3.8 /Users/xiaoyu/Repos/university-setup/scripts/chooses.py

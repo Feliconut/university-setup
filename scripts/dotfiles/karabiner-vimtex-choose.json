@@ -1,0 +1,39 @@
+{
+   "description": "Invoke the choose menu, and vim popup",
+   "manipulators": [
+       {
+           "from": {
+               "key_code": "spacebar",
+               "modifiers": {
+                   "mandatory": [
+                       "left_command",
+                       "left_option"
+                   ]
+               }
+           },
+           "to": [
+               {
+                   "shell_command": "cd /Users/xiaoyu; source ~/.zshrc ; /opt/homebrew/bin/python3.8 /Users/xiaoyu/Repos/university-setup/scripts/chooses.py"
+               }
+           ],
+           "type": "basic"
+       },
+       {
+           "from": {
+               "key_code": "c",
+               "modifiers": {
+                   "mandatory": [
+                       "left_command",
+                       "left_option"
+                   ]
+               }
+           },
+           "to": [
+               {
+                   "shell_command": "cd /Users/xiaoyu ; /opt/homebrew/bin/python3.8 /Users/xiaoyu/Repos/university-setup/scripts/vim_popup.py"
+               }
+           ],
+           "type": "basic"
+       }
+   ]
+}
