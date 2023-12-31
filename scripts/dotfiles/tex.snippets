@@ -63,6 +63,42 @@ def create_matrix(snip):
         final_str += old_spacing + "\\end{"+matrix_str+"}\n$0"
 
         snip.expand_anon(final_str)
+
+def abbrv(name):
+	# only retain alphabetic characters, small case, CamelCase
+	# also shorten words like Theorem, Lemma, Proposition
+	#example: Second Sylow's Theorem -> SecondSylowThm
+	
+	name = name.replace('\'s', '')
+	name = name.replace('\'', '')
+	name = name.replace('Theorem', 'Thm')
+	name = name.replace('Lemma', 'Lem')
+	name = name.replace('Proposition', 'Prop')
+	name = name.replace('Corollary', 'Cor')
+	name = name.replace('Definition', 'Def')
+	name = name.replace('Example', 'Ex')
+	name = name.replace('Exercise', 'Ex')
+	name = name.replace('Remark', 'Rem')
+	name = name.replace('Problem', 'Prob')
+	name = name.replace('Question', 'Q')
+	name = name.replace('Conjecture', 'Conj')
+	name = name.replace('Observation', 'Obs')
+	name = name.replace('Claim', 'Clm')
+	name = name.replace('Algorithm', 'Alg')
+	name = name.replace('Equation', 'Eqn')
+
+	# Treat - and space as word separators, Turn into CamelCase
+	# First split the word, then capitalize each word
+	# Finally join the words back together
+	name = ''.join(map(lambda x: x.capitalize(),
+	[n for nname in name.split('-') for n in nname.split(' ')]))
+
+	# Remove all non-alphabetic characters
+	name = ''.join([c for c in name if c.isalpha()])
+	return name
+
+
+
 endglobal
 
 
@@ -993,4 +1029,79 @@ context "math()"
 snippet bk "braket" wiA
 \left\langle $1 \middle| $2 \right\rangle $0
 endsnippet
+
+context "not math()"
+post_jump "vim.eval('feedkeys(\"\<C-x>\<C-o>\")')"
+snippet () "eqref" i
+\eqref{eqn$1} $0
+endsnippet
+
+context "not math()"
+post_jump "vim.eval('feedkeys(\"\<C-x>\<C-o>\")')"
+snippet Theorem~ "ref" iA
+Theroem~\ref{thm:$1} $0
+endsnippet
+
+context "not math()"
+post_jump "vim.eval('feedkeys(\"\<C-x>\<C-o>\")')"
+snippet Lemma~ "ref" iA
+Lemma~\ref{lem:$1} $0
+endsnippet
+
+context "not math()"
+post_jump "vim.eval('feedkeys(\"\<C-x>\<C-o>\")')"
+snippet Proposition~ "ref" iA
+Proposition~\ref{prop:$1} $0
+endsnippet
+
+context "not math()"
+post_jump "vim.eval('feedkeys(\"\<C-x>\<C-o>\")')"
+snippet Problem~ "ref" iA
+Problem~\ref{prob:$1} $0
+endsnippet
+
+context "not math()"
+snippet [[ "logseq" iA
+\logseq{$1} $0
+endsnippet
+
+context 'not math()'
+post_jump "vim.eval('feedkeys(\"\<C-x>\<C-o>\")')"
+snippet [] "cite" iA
+\cite{$1} $0
+endsnippet
+
+context 'not math()'
+snippet thm "Theorem" bA
+\begin{theorem}`!p snip.rv = '[' if t[1] else ''`$1`!p snip.rv = ']' if t[1] else ''`
+	\label{lem:${2:`!p snip.rv =  abbrv(t[1])`}}
+	$0
+\end{theorem}
+endsnippet
+
+context 'not math()'
+snippet lem "Lemma" bA
+\begin{lemma}`!p snip.rv = '[' if t[1] else ''`$1`!p snip.rv = ']' if t[1] else ''`
+	\label{lem:${2:`!p snip.rv =  abbrv(t[1])`}}
+	$0
+\end{lemma}
+endsnippet
+
+context 'not math()'
+snippet prop "Proposition" bA
+\begin{proposition}`!p snip.rv = '[' if t[1] else ''`$1`!p snip.rv = ']' if t[1] else ''`
+	\label{prop:${2:`!p snip.rv =  abbrv(t[1])`}}
+	$0
+\end{proposition}
+endsnippet
+
+context 'not math()'
+snippet conj "Conjecture" bA
+\begin{conjecture}`!p snip.rv = '[' if t[1] else ''`$1`!p snip.rv = ']' if t[1] else ''`
+	\label{conj:${2:`!p snip.rv =  abbrv(t[1])`}}
+	$0
+\end{conjecture}
+endsnippet
+
+
 # vim:ft=snippets

@@ -60,7 +60,18 @@ Plug 'sonph/onehalf', { 'rtp': 'vim' }
 Plug 'preservim/nerdtree'
 Plug 'Xuyuanp/nerdtree-git-plugin'
 Plug 'https://github.com/ludovicchabant/vim-gutentags'
+
+"Plug 'neoclide/coc.nvim', {'branch': 'release'}
+
+" Plug 'itchyny/lightline.vim'
+" let g:lightline = {
+"       \ 'colorscheme': 'one',
+"       \ }
+
 call plug#end()
+
+" set noshowmode
+
 
 " set statusline+=%{gutentags#statusline()}
 
@@ -177,4 +188,15 @@ function! QuiverTextObject()
     endif
 endfunction
 
+""""""""""""""""""
+" Vimtex Keyboard Shortcuts
+""""""""""""""""""
 
+augroup vimrc_tex
+  autocmd!
+  "autocmd FileType tex nnoremap <buffer> <leader>ls :VimtexCompileSS<cr>
+  autocmd FileType tex nnoremap <buffer> <F8> :VimtexCompile<cr>
+  autocmd FileType tex inoremap <buffer> <F8> <Esc>:VimtexCompile<cr>a
+augroup END
+autocmd FileType tex nnoremap <F9> :w<CR>
+autocmd FileType tex inoremap <F9> <Esc>:w<CR>
